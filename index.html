@@ -33,9 +33,7 @@
     margin: 0 auto;
   }
 
-  header {
-    margin-bottom: 28px;
-  }
+  header { margin-bottom: 28px; }
 
   header h1 {
     font-size: 1.45rem;
@@ -66,30 +64,16 @@
     margin-bottom: 14px;
   }
 
-  .dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .dot-dex { background: var(--dex); }
   .dot-pod { background: var(--pod); }
 
   .device-row .name     { font-size: 0.88rem; font-weight: 700; }
   .device-row .interval { margin-left: auto; font-size: 0.68rem; color: var(--muted); }
 
-  .divider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 18px 0;
-  }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
 
-  .field-row {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    margin-bottom: 12px;
-  }
-
+  .field-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
   .field-row:last-child { margin-bottom: 0; }
 
   label { font-size: 0.7rem; color: var(--muted); }
@@ -106,7 +90,6 @@
     appearance: none;
     outline: none;
   }
-
   select:focus, input[type="date"]:focus { border-color: var(--pod); }
 
   .btn-primary {
@@ -121,11 +104,21 @@
     font-weight: 700;
     cursor: pointer;
     margin-top: 4px;
+    transition: transform 0.1s, opacity 0.1s;
   }
+  .btn-primary:active { transform: translateY(1px); opacity: 0.9; }
 
   /* ── TRACKER ── */
   #tracker { display: none; }
 
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .tracker-enter { animation: fadeUp 0.28s cubic-bezier(0.25, 1, 0.5, 1) both; }
+
+  /* ── STATUS GRID ── */
   .status-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -140,28 +133,60 @@
     padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 7px;
   }
 
-  .sc-label {
-    font-size: 0.6rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
+  .sc-label { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; }
   .sc-label.dex { color: var(--dex); }
   .sc-label.pod { color: var(--pod); }
 
   .sc-position { font-size: 0.92rem; font-weight: 700; line-height: 1.3; }
 
   .sc-days { font-size: 0.7rem; color: var(--muted); }
+
   .sc-days .num {
     font-family: 'DM Mono', monospace;
     font-size: 1.05rem;
     font-weight: 500;
   }
-  .sc-days .num.urgent { color: var(--warn); }
-  .sc-days .num.soon   { color: #fbbf24; }
-  .sc-days .num.ok     { color: var(--ok); }
+  .sc-days .num.urgent   { color: var(--warn); }
+  .sc-days .num.soon     { color: #fbbf24; }
+  .sc-days .num.ok       { color: var(--ok); }
+  .sc-days .num.due      { color: var(--warn); font-size: 0.78rem; font-weight: 700; }
+  .sc-days .num.overdue  { color: #ef4444; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.45; }
+  }
+  .num.urgent  { animation: pulse 1.6s ease-in-out infinite; }
+  .num.due     { animation: pulse 1.2s ease-in-out infinite; }
+  .num.overdue { animation: pulse 1.2s ease-in-out infinite; }
+
+  /* ── CHANGE BUTTON ── */
+  .btn-change {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 6px 10px;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+    transition: color 0.15s, border-color 0.15s, transform 0.1s;
+    margin-top: 2px;
+  }
+  .btn-change:hover { color: var(--text); border-color: var(--muted); }
+  .btn-change:active { transform: scale(0.97); }
+
+  .btn-change.confirmed {
+    color: var(--ok);
+    border-color: var(--ok);
+    background: rgba(52, 211, 153, 0.08);
+  }
 
   /* ── TIMELINE ── */
   .section-label {
@@ -172,12 +197,7 @@
     margin-bottom: 10px;
   }
 
-  .timeline {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    margin-bottom: 32px;
-  }
+  .timeline { display: flex; flex-direction: column; gap: 7px; margin-bottom: 32px; }
 
   .tl-item {
     display: flex;
@@ -188,11 +208,9 @@
     border: 1px solid var(--border);
     border-radius: 12px;
   }
-
   .tl-item.side-switch { border-color: rgba(167, 139, 250, 0.35); }
 
   .tl-date { flex-shrink: 0; min-width: 46px; }
-
   .tl-date .day {
     font-family: 'DM Mono', monospace;
     font-size: 0.9rem;
@@ -200,18 +218,12 @@
     color: var(--text);
     display: block;
   }
-
   .today-tag    { display: block; font-size: 0.58rem; color: var(--dex); margin-top: 2px; }
   .tomorrow-tag { display: block; font-size: 0.58rem; color: var(--pod); margin-top: 2px; }
 
   .tl-body { flex: 1; }
 
-  .tl-device {
-    font-size: 0.62rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 3px;
-  }
+  .tl-device { font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; }
   .tl-device.dex  { color: var(--dex); }
   .tl-device.pod  { color: var(--pod); }
   .tl-device.both { color: var(--text); }
@@ -220,12 +232,7 @@
   .tl-pos + .tl-pos { margin-top: 1px; }
   .tl-note { font-size: 0.67rem; color: var(--muted); margin-top: 2px; }
 
-  .tl-switch-icon {
-    font-size: 0.72rem;
-    color: var(--pod);
-    align-self: center;
-    flex-shrink: 0;
-  }
+  .tl-switch-icon { font-size: 0.72rem; color: var(--pod); align-self: center; flex-shrink: 0; }
 
   /* ── RESET ── */
   .btn-reset {
@@ -239,6 +246,16 @@
     text-decoration: underline;
     text-underline-offset: 3px;
     display: block;
+  }
+
+  /* ── REDUCED MOTION ── */
+  @media (prefers-reduced-motion: reduce) {
+    .tracker-enter      { animation: none; }
+    .num.urgent,
+    .num.due,
+    .num.overdue        { animation: none; }
+    .btn-primary,
+    .btn-change         { transition: none; }
   }
 </style>
 </head>
@@ -307,12 +324,14 @@
     <div class="status-card">
       <div class="sc-label dex">Dexcom G7</div>
       <div class="sc-position" id="cur-dex-pos">–</div>
-      <div class="sc-days">Noch <span class="num" id="cur-dex-days">–</span> Tage</div>
+      <div class="sc-days" id="cur-dex-days-wrap">Noch <span class="num" id="cur-dex-days">–</span> Tage</div>
+      <button class="btn-change" id="btn-change-dex" onclick="changeDevice('dex')">Jetzt gewechselt</button>
     </div>
     <div class="status-card">
       <div class="sc-label pod">Omnipod 5</div>
       <div class="sc-position" id="cur-pod-pos">–</div>
-      <div class="sc-days">Noch <span class="num" id="cur-pod-days">–</span> Tage</div>
+      <div class="sc-days" id="cur-pod-days-wrap">Noch <span class="num" id="cur-pod-days">–</span> Tage</div>
+      <button class="btn-change" id="btn-change-pod" onclick="changeDevice('pod')">Jetzt gewechselt</button>
     </div>
   </div>
 
@@ -338,7 +357,6 @@ const POD_POSITIONS = {
 function getSide(pos) {
   return pos.toLowerCase().includes('link') ? 'left' : 'right';
 }
-
 function oppSide(side) { return side === 'right' ? 'left' : 'right'; }
 
 function nextInPool(pool, lastPos) {
@@ -352,28 +370,83 @@ function addDays(date, n) {
   return d;
 }
 
-function dateStr(d) {
-  return d.toISOString().split('T')[0];
-}
+function dateStr(d) { return d.toISOString().split('T')[0]; }
 
 function formatDate(d) {
   return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
 }
 
-function today() {
-  return new Date(new Date().toDateString());
-}
+function today() { return new Date(new Date().toDateString()); }
 
-function el(tag, className) {
+function el(tag, cls) {
   const e = document.createElement(tag);
-  if (className) e.className = className;
+  if (cls) e.className = cls;
   return e;
 }
-
-function txt(tag, className, text) {
-  const e = el(tag, className);
+function txt(tag, cls, text) {
+  const e = el(tag, cls);
   e.textContent = text;
   return e;
+}
+
+// Returns days until the next upcoming change (>= today).
+// Returns 0 if today IS a change day.
+function daysUntilNext(startDate, interval) {
+  let next = new Date(startDate);
+  next.setDate(next.getDate() + interval);
+  while (next < today()) next.setDate(next.getDate() + interval);
+  return Math.round((next - today()) / 86400000);
+}
+
+// Returns display info for the days counter.
+function getStatusInfo(startDate, interval) {
+  const t = today();
+  const daysUsed = Math.max(0, Math.floor((t - startDate) / 86400000));
+  const cyclesPassed = Math.floor(daysUsed / interval);
+
+  if (cyclesPassed > 0) {
+    // Device has reached at least one scheduled change
+    const lastExpected = addDays(startDate, cyclesPassed * interval);
+    const overdueDays = Math.round((t - lastExpected) / 86400000);
+
+    if (overdueDays === 0) {
+      return { html: null, text: 'Heute wechseln', state: 'due' };
+    }
+    return {
+      html: null,
+      text: overdueDays + (overdueDays === 1 ? ' Tag überfällig' : ' Tage überfällig'),
+      state: 'overdue',
+    };
+  }
+
+  // Still within first cycle
+  const daysLeft = interval - daysUsed;
+  if (daysLeft === 0) {
+    return { text: 'Heute wechseln', state: 'due' };
+  }
+  return {
+    text: daysLeft.toString(),
+    state: daysLeft <= 1 ? 'urgent' : daysLeft <= 2 ? 'soon' : 'ok',
+    suffix: ' ' + (daysLeft === 1 ? 'Tag' : 'Tage'),
+  };
+}
+
+function renderDaysCell(wrapId, numId, startDate, interval) {
+  const wrap = document.getElementById(wrapId);
+  const numEl = document.getElementById(numId);
+  const info = getStatusInfo(new Date(startDate), interval);
+
+  if (info.state === 'due' || info.state === 'overdue') {
+    wrap.textContent = '';
+    const span = txt('span', 'num ' + info.state, info.text);
+    wrap.appendChild(span);
+  } else {
+    wrap.textContent = 'Noch ';
+    numEl.textContent = info.text;
+    numEl.className = 'num ' + info.state;
+    wrap.appendChild(numEl);
+    wrap.appendChild(document.createTextNode(info.suffix || ' Tage'));
+  }
 }
 
 function startTracker() {
@@ -382,51 +455,82 @@ function startTracker() {
   const podPos  = document.getElementById('pod-pos').value;
   const podDate = new Date(document.getElementById('pod-date').value);
 
-  if (isNaN(dexDate) || isNaN(podDate)) { alert('Bitte beide Daten eingeben.'); return; }
+  if (isNaN(dexDate) || isNaN(podDate)) {
+    alert('Bitte beide Daten eingeben.');
+    return;
+  }
 
   const state = { dexPos, dexDate: dateStr(dexDate), podPos, podDate: dateStr(podDate) };
   localStorage.setItem('cgm-tracker', JSON.stringify(state));
-  renderTracker(state);
+  renderTracker(state, true);
 }
 
-function renderTracker(state) {
-  document.getElementById('setup').style.display = 'none';
-  document.getElementById('tracker').style.display = 'block';
+function changeDevice(device) {
+  const state = JSON.parse(localStorage.getItem('cgm-tracker'));
+  const dexSide = getSide(state.dexPos);
 
-  const t = today();
-  const dexStart = new Date(state.dexDate);
-  const podStart = new Date(state.podDate);
-
-  function daysUntilNext(startDate, interval) {
-    let next = new Date(startDate);
-    next.setDate(next.getDate() + interval);
-    while (next <= t) next.setDate(next.getDate() + interval);
-    return Math.round((next - t) / 86400000);
+  if (device === 'dex') {
+    state.dexPos  = nextInPool(DEX_POSITIONS[dexSide], state.dexPos);
+    state.dexDate = dateStr(today());
+  } else {
+    const pool = POD_POSITIONS[dexSide];
+    let newPos = nextInPool(pool, state.podPos);
+    if (newPos === state.dexPos) newPos = nextInPool(pool, newPos);
+    state.podPos  = newPos;
+    state.podDate = dateStr(today());
   }
 
-  const dexLeft = daysUntilNext(dexStart, DEX_INTERVAL);
-  const podLeft = daysUntilNext(podStart, POD_INTERVAL);
-  const dexSide = getSide(state.dexPos);
+  localStorage.setItem('cgm-tracker', JSON.stringify(state));
+
+  // Delight: briefly show confirmation on the button before re-rendering
+  const btn = document.getElementById('btn-change-' + device);
+  btn.textContent = '✓ Gespeichert';
+  btn.classList.add('confirmed');
+  btn.disabled = true;
+
+  setTimeout(() => {
+    renderTracker(state);
+  }, 900);
+}
+
+function renderTracker(state, animate) {
+  document.getElementById('setup').style.display = 'none';
+  const tracker = document.getElementById('tracker');
+  tracker.style.display = 'block';
+
+  if (animate) {
+    tracker.classList.remove('tracker-enter');
+    void tracker.offsetWidth; // reflow to restart animation
+    tracker.classList.add('tracker-enter');
+  }
+
+  const t = today();
 
   document.getElementById('cur-dex-pos').textContent = state.dexPos;
   document.getElementById('cur-pod-pos').textContent = state.podPos;
 
-  function colorDays(el, n) {
-    el.textContent = n;
-    el.className = 'num ' + (n <= 1 ? 'urgent' : n <= 2 ? 'soon' : 'ok');
-  }
-  colorDays(document.getElementById('cur-dex-days'), dexLeft);
-  colorDays(document.getElementById('cur-pod-days'), podLeft);
+  renderDaysCell('cur-dex-days-wrap', 'cur-dex-days', state.dexDate, DEX_INTERVAL);
+  renderDaysCell('cur-pod-days-wrap', 'cur-pod-days', state.podDate, POD_INTERVAL);
+
+  // Restore change buttons (in case they were in confirmed state)
+  const btnDex = document.getElementById('btn-change-dex');
+  const btnPod = document.getElementById('btn-change-pod');
+  btnDex.textContent = 'Jetzt gewechselt';
+  btnDex.classList.remove('confirmed');
+  btnDex.disabled = false;
+  btnPod.textContent = 'Jetzt gewechselt';
+  btnPod.classList.remove('confirmed');
+  btnPod.disabled = false;
 
   // Build schedule for next 60 days
   const schedule = [];
   let curDexPos = state.dexPos;
   let curPodPos = state.podPos;
-  let curSide = dexSide;
+  let curSide   = getSide(state.dexPos);
 
-  let nextDexDate = addDays(t, dexLeft);
-  let nextPodDate = addDays(t, podLeft);
-  const horizon = addDays(t, 61);
+  let nextDexDate = addDays(t, daysUntilNext(new Date(state.dexDate), DEX_INTERVAL));
+  let nextPodDate = addDays(t, daysUntilNext(new Date(state.podDate), POD_INTERVAL));
+  const horizon   = addDays(t, 61);
 
   while (nextDexDate < horizon || nextPodDate < horizon) {
     const dexNext = nextDexDate < horizon;
@@ -435,17 +539,10 @@ function renderTracker(state) {
     const podTime = nextPodDate.getTime();
 
     if (dexTime === podTime && dexNext && podNext) {
-      const newSide = oppSide(curSide);
+      const newSide   = oppSide(curSide);
       const newDexPos = nextInPool(DEX_POSITIONS[newSide], DEX_POSITIONS[newSide][0]);
       const newPodPos = POD_POSITIONS[newSide][0];
-      schedule.push({
-        date: new Date(nextDexDate),
-        type: 'both',
-        dexPos: newDexPos,
-        podPos: newPodPos,
-        sideSwitch: true,
-        newSide,
-      });
+      schedule.push({ date: new Date(nextDexDate), type: 'both', dexPos: newDexPos, podPos: newPodPos, sideSwitch: true, newSide });
       curSide   = newSide;
       curDexPos = newDexPos;
       curPodPos = newPodPos;
@@ -454,18 +551,19 @@ function renderTracker(state) {
     } else if (!podNext || (dexNext && dexTime < podTime)) {
       const newDexPos = nextInPool(DEX_POSITIONS[curSide], curDexPos);
       schedule.push({ date: new Date(nextDexDate), type: 'dex', dexPos: newDexPos });
-      curDexPos = newDexPos;
+      curDexPos   = newDexPos;
       nextDexDate = addDays(nextDexDate, DEX_INTERVAL);
     } else {
-      const pool = POD_POSITIONS[curSide];
+      const pool      = POD_POSITIONS[curSide];
       const newPodPos = nextInPool(pool, curPodPos);
       const candidate = newPodPos === curDexPos ? nextInPool(pool, newPodPos) : newPodPos;
       schedule.push({ date: new Date(nextPodDate), type: 'pod', podPos: candidate });
-      curPodPos = candidate;
+      curPodPos   = candidate;
       nextPodDate = addDays(nextPodDate, POD_INTERVAL);
     }
   }
 
+  // Render timeline
   const tl = document.getElementById('timeline');
   tl.textContent = '';
 
@@ -475,16 +573,13 @@ function renderTracker(state) {
 
     const item = el('div', 'tl-item' + (ev.sideSwitch ? ' side-switch' : ''));
 
-    // Date column
     const dateCol = el('div', 'tl-date');
     dateCol.appendChild(txt('span', 'day', formatDate(ev.date)));
     if (isToday)         dateCol.appendChild(txt('span', 'today-tag', 'heute'));
     else if (isTomorrow) dateCol.appendChild(txt('span', 'tomorrow-tag', 'morgen'));
     item.appendChild(dateCol);
 
-    // Body column
     const body = el('div', 'tl-body');
-
     if (ev.type === 'both') {
       body.appendChild(txt('div', 'tl-device both', 'Dexcom + Omnipod'));
       body.appendChild(txt('div', 'tl-pos', 'Dex: ' + ev.dexPos));
@@ -497,12 +592,9 @@ function renderTracker(state) {
       body.appendChild(txt('div', 'tl-device pod', 'Omnipod 5'));
       body.appendChild(txt('div', 'tl-pos', ev.podPos));
     }
-
     item.appendChild(body);
 
-    if (ev.sideSwitch) {
-      item.appendChild(txt('div', 'tl-switch-icon', '⇄'));
-    }
+    if (ev.sideSwitch) item.appendChild(txt('div', 'tl-switch-icon', '⇄'));
 
     tl.appendChild(item);
   });
@@ -517,12 +609,20 @@ function resetTracker() {
 
 // Init
 (function() {
-  const t = new Date();
+  const t   = new Date();
   const fmt = d => d.toISOString().split('T')[0];
+
+  // Constrain date inputs to a sensible range
+  const maxDate = fmt(t);
+  const minDate = fmt(new Date(t.getFullYear() - 1, t.getMonth(), t.getDate()));
+  ['dex-date', 'pod-date'].forEach(id => {
+    const input = document.getElementById(id);
+    input.max = maxDate;
+    input.min = minDate;
+  });
 
   document.getElementById('pod-pos').value  = 'Rechter Bauch';
   document.getElementById('pod-date').value = fmt(t);
-
   document.getElementById('dex-pos').value  = 'Rechter Arm';
   const dexSet = new Date(t);
   dexSet.setDate(dexSet.getDate() + 1);
