@@ -394,6 +394,7 @@ function renderStatus() {
     if (!currentEntry) return;
 
     const template = document.getElementById("status-card-template").content.firstElementChild.cloneNode(true);
+    template.classList.add(`status-card--${device.colorClass}`);
     template.querySelector(".device-chip").textContent = device.label;
     template.querySelector(".device-chip").classList.add(device.colorClass);
     template.querySelector(".status-position").textContent = currentEntry.position;
@@ -483,6 +484,13 @@ function makePill(text, className = "") {
   const node = document.createElement("span");
   node.className = `pill ${className}`.trim();
   node.textContent = text;
+  return node;
+}
+
+function makeCalendarPill(text, className = "", fullLabel = text) {
+  const node = makePill(text, `calendar-pill ${className}`.trim());
+  node.title = fullLabel;
+  node.setAttribute("aria-label", fullLabel);
   return node;
 }
 
@@ -612,18 +620,19 @@ function renderCalendar() {
       const eventList = document.createElement("div");
       eventList.className = "calendar-events";
       events.slice(0, 3).forEach((event) => {
-        const pill = makePill(getDevice(event.device).label, `is-${getDevice(event.device).colorClass}`);
+        const device = getDevice(event.device);
+        const pill = makeCalendarPill(device.key.toUpperCase(), `is-${device.colorClass}`, device.label);
         eventList.appendChild(pill);
       });
 
       if (events.length > 3) {
-        eventList.appendChild(makePill(`+${events.length - 3} mehr`));
+        eventList.appendChild(makeCalendarPill(`+${events.length - 3}`, "", `${events.length - 3} weitere Wechsel`));
       }
 
       if (dayGroup?.isSideSwitch) {
-        eventList.appendChild(makePill("Seitenwechsel", "is-collision"));
+        eventList.appendChild(makeCalendarPill("SW", "is-collision", "Seitenwechsel"));
       } else if (events.length > 1) {
-        eventList.appendChild(makePill("Kollision", "is-collision"));
+        eventList.appendChild(makeCalendarPill("2x", "is-collision", "Kollision"));
       }
 
       cell.appendChild(eventList);
@@ -977,6 +986,10 @@ function attachEvents() {
   document.getElementById("reset-btn").addEventListener("click", resetTracker);
   document.getElementById("calendar-prev").addEventListener("click", () => shiftCalendar(-1));
   document.getElementById("calendar-next").addEventListener("click", () => shiftCalendar(1));
+  document.querySelector(".action-menu-panel").addEventListener("click", () => {
+    const menu = document.querySelector(".action-menu");
+    if (window.innerWidth <= 860) menu.removeAttribute("open");
+  });
 }
 
 let state = loadState();

@@ -79,11 +79,14 @@
             <p class="section-kicker">Uebersicht</p>
             <h2>Aktueller Status</h2>
           </div>
-          <div class="button-row">
-            <button type="button" class="btn btn-secondary" id="export-json">JSON exportieren</button>
-            <button type="button" class="btn btn-secondary" id="export-csv">CSV exportieren</button>
-            <button type="button" class="btn btn-ghost" id="reset-btn">Neu einrichten</button>
-          </div>
+          <details class="action-menu">
+            <summary class="btn btn-ghost action-menu-trigger">Aktionen</summary>
+            <div class="button-row action-menu-panel">
+              <button type="button" class="btn btn-secondary" id="export-json">JSON exportieren</button>
+              <button type="button" class="btn btn-secondary" id="export-csv">CSV exportieren</button>
+              <button type="button" class="btn btn-ghost" id="reset-btn">Neu einrichten</button>
+            </div>
+          </details>
         </div>
 
         <div class="status-grid" id="status-grid"></div>
