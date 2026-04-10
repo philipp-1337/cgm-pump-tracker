@@ -185,6 +185,7 @@ h3 {
 
 .device-grid,
 .form-columns,
+.config-grid,
 .settings-grid,
 .status-grid {
   display: grid;
@@ -201,6 +202,10 @@ h3 {
 }
 
 .settings-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.config-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -223,6 +228,77 @@ h3 {
 .timeline-item,
 .history-item {
   padding: 16px 18px;
+}
+
+.calendar-wrap {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.calendar-card {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel-strong);
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.calendar-head h4 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.calendar-weekdays div {
+  text-align: center;
+  color: var(--muted);
+  font-family: "DM Mono", monospace;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.calendar-day {
+  min-height: 108px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 10px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.calendar-day.is-outside {
+  opacity: 0.45;
+}
+
+.calendar-day.is-today {
+  border-color: rgba(15, 118, 110, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.25);
+}
+
+.calendar-day.is-side-switch {
+  border-color: rgba(194, 65, 12, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(194, 65, 12, 0.18);
+  background: linear-gradient(180deg, rgba(204, 111, 55, 0.12), rgba(255, 255, 255, 0.88));
+}
+
+.calendar-day-number {
+  font-family: "DM Mono", monospace;
+  font-size: 0.84rem;
+}
+
+.calendar-events {
+  display: grid;
+  gap: 6px;
 }
 
 .device-card {
@@ -361,6 +437,16 @@ textarea:focus {
   gap: 10px;
 }
 
+.timeline-item.is-side-switch {
+  border-color: rgba(194, 65, 12, 0.35);
+  background: linear-gradient(180deg, rgba(204, 111, 55, 0.1), rgba(255, 250, 241, 1));
+}
+
+.timeline-entry {
+  padding-top: 10px;
+  border-top: 1px solid rgba(16, 33, 43, 0.08);
+}
+
 .timeline-top,
 .history-top,
 .setting-top {
@@ -399,6 +485,21 @@ textarea:focus {
 .pill {
   background: rgba(16, 33, 43, 0.07);
   color: var(--ink);
+}
+
+.pill.is-dex {
+  background: rgba(21, 114, 161, 0.12);
+  color: var(--dex);
+}
+
+.pill.is-pod {
+  background: rgba(204, 111, 55, 0.12);
+  color: var(--pod);
+}
+
+.pill.is-collision {
+  background: rgba(194, 65, 12, 0.12);
+  color: var(--danger);
 }
 
 .tag-btn {
@@ -464,6 +565,8 @@ textarea:focus {
 @media (max-width: 860px) {
   .hero,
   .device-grid,
+  .config-grid,
+  .calendar-wrap,
   .status-grid,
   .settings-grid,
   .form-columns {

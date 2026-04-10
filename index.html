@@ -14,7 +14,7 @@
   <div class="page-shell">
     <header class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">Dexcom G7 + Omnipod 5</p>
+        <p class="eyebrow" id="hero-eyebrow">Dexcom G7 + Omnipod 5</p>
         <h1>Tracker fuer Wechsel, Historie und bessere Stellenrotation</h1>
         <p class="hero-text">Plant Wechsel, speichert echte Eintraege und beruecksichtigt Ruhezeiten, gesperrte Stellen und Notizen.</p>
       </div>
@@ -38,8 +38,8 @@
           <div class="device-grid">
             <article class="device-card">
               <div class="device-head">
-                <div class="device-chip dex">Dexcom G7</div>
-                <span>Intervall 10 Tage</span>
+                <div class="device-chip dex" id="dex-setup-label">Dexcom G7</div>
+                <span id="dex-setup-interval">Intervall 10 Tage</span>
               </div>
               <label class="field">
                 <span>Aktuelle Position</span>
@@ -53,8 +53,8 @@
 
             <article class="device-card">
               <div class="device-head">
-                <div class="device-chip pod">Omnipod 5</div>
-                <span>Intervall 3 Tage</span>
+                <div class="device-chip pod" id="pod-setup-label">Omnipod 5</div>
+                <span id="pod-setup-interval">Intervall 3 Tage</span>
               </div>
               <label class="field">
                 <span>Aktuelle Position</span>
@@ -81,6 +81,7 @@
           </div>
           <div class="button-row">
             <button type="button" class="btn btn-secondary" id="export-json">JSON exportieren</button>
+            <button type="button" class="btn btn-secondary" id="export-csv">CSV exportieren</button>
             <button type="button" class="btn btn-ghost" id="reset-btn">Neu einrichten</button>
           </div>
         </div>
@@ -101,6 +102,20 @@
         <section class="subsection">
           <div class="subsection-head">
             <div>
+              <p class="section-kicker">Kalenderansicht</p>
+              <h3>Monatsansicht fuer Muster und Kollisionen</h3>
+            </div>
+            <div class="button-row calendar-nav">
+              <button type="button" class="btn btn-ghost" id="calendar-prev">Vorheriger Monat</button>
+              <button type="button" class="btn btn-ghost" id="calendar-next">Naechster Monat</button>
+            </div>
+          </div>
+          <div class="calendar-wrap" id="calendar-wrap"></div>
+        </section>
+
+        <section class="subsection">
+          <div class="subsection-head">
+            <div>
               <p class="section-kicker">Neuer Eintrag</p>
               <h3>Wechsel dokumentieren</h3>
             </div>
@@ -111,10 +126,7 @@
             <div class="form-columns">
               <label class="field">
                 <span>Geraet</span>
-                <select id="change-device" name="change-device">
-                  <option value="dex">Dexcom G7</option>
-                  <option value="pod">Omnipod 5</option>
-                </select>
+                <select id="change-device" name="change-device"></select>
               </label>
               <label class="field">
                 <span>Neue Position</span>
@@ -150,6 +162,65 @@
 
             <div class="actions">
               <button type="submit" class="btn btn-primary">Wechsel speichern</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="subsection">
+          <div class="subsection-head">
+            <div>
+              <p class="section-kicker">Geraetekonfiguration</p>
+              <h3>Namen, Intervalle und Positionslisten anpassen</h3>
+            </div>
+            <p class="panel-note">Damit laesst sich der Tracker auch fuer andere Kombinationen verwenden.</p>
+          </div>
+          <form id="config-form" class="config-grid">
+            <article class="setting-card">
+              <div class="setting-top">
+                <div>
+                  <p class="section-kicker">Slot A</p>
+                  <h3 id="config-dex-title">Dexcom G7</h3>
+                </div>
+                <p class="setting-note">Farbe bleibt blau.</p>
+              </div>
+              <label class="field">
+                <span>Name</span>
+                <input type="text" id="config-dex-label" name="config-dex-label" maxlength="40">
+              </label>
+              <label class="field">
+                <span>Intervall in Tagen</span>
+                <input type="number" id="config-dex-interval" name="config-dex-interval" min="1" max="30">
+              </label>
+              <label class="field">
+                <span>Positionen</span>
+                <textarea id="config-dex-positions" name="config-dex-positions" rows="5" placeholder="Eine Position pro Zeile"></textarea>
+              </label>
+            </article>
+
+            <article class="setting-card">
+              <div class="setting-top">
+                <div>
+                  <p class="section-kicker">Slot B</p>
+                  <h3 id="config-pod-title">Omnipod 5</h3>
+                </div>
+                <p class="setting-note">Farbe bleibt orange.</p>
+              </div>
+              <label class="field">
+                <span>Name</span>
+                <input type="text" id="config-pod-label" name="config-pod-label" maxlength="40">
+              </label>
+              <label class="field">
+                <span>Intervall in Tagen</span>
+                <input type="number" id="config-pod-interval" name="config-pod-interval" min="1" max="30">
+              </label>
+              <label class="field">
+                <span>Positionen</span>
+                <textarea id="config-pod-positions" name="config-pod-positions" rows="5" placeholder="Eine Position pro Zeile"></textarea>
+              </label>
+            </article>
+
+            <div class="actions">
+              <button type="submit" class="btn btn-primary">Konfiguration speichern</button>
             </div>
           </form>
         </section>

@@ -1,12 +1,15 @@
-const STORAGE_KEY = "cgm-tracker-v2";
+const STORAGE_KEY = "cgm-tracker-v3";
+const LEGACY_STORAGE_KEY = "cgm-tracker-v2";
+const DEVICE_KEYS = ["dex", "pod"];
 
-const DEVICES = {
+const DEFAULT_CONFIG = {
   dex: {
     key: "dex",
     label: "Dexcom G7",
     intervalDays: 10,
     positions: ["Rechter Arm", "Linker Arm", "Rechter Bauch", "Linker Bauch"],
     colorClass: "dex",
+    defaultRestDays: 10,
   },
   pod: {
     key: "pod",
@@ -14,15 +17,12 @@ const DEVICES = {
     intervalDays: 3,
     positions: ["Rechtes Bein", "Linkes Bein", "Rechter Bauch", "Linker Bauch", "Rechter Arm", "Linker Arm"],
     colorClass: "pod",
+    defaultRestDays: 6,
   },
 };
 
-const DEFAULT_REST_DAYS = {
-  dex: 10,
-  pod: 6,
-};
-
 const selectedTags = new Set();
+let calendarMonthOffset = 0;
 
 function now() {
   return new Date();
@@ -40,10 +40,18 @@ function addDays(date, amount) {
   return copy;
 }
 
-function addHours(date, amount) {
+function addMonths(date, amount) {
   const copy = new Date(date);
-  copy.setHours(copy.getHours() + amount);
+  copy.setMonth(copy.getMonth() + amount);
   return copy;
+}
+
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function endOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
 
 function parseDate(value) {
@@ -75,6 +83,10 @@ function formatDateTime(value) {
   });
 }
 
+function formatMonth(value) {
+  return new Date(value).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+}
+
 function daysBetween(from, to) {
   const start = new Date(from);
   const end = new Date(to);
@@ -83,60 +95,113 @@ function daysBetween(from, to) {
   return Math.round((end - start) / 86400000);
 }
 
-function getSide(position) {
-  return position.toLowerCase().includes("link") ? "left" : "right";
+function createDefaultConfig() {
+  return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
 }
 
-function createDefaultSiteState(deviceKey) {
+function getDevice(deviceKey) {
+  return state.config[deviceKey];
+}
+
+function getDevices() {
+  return DEVICE_KEYS.map((key) => state.config[key]);
+}
+
+function createSiteStateForDevice(deviceKey, config = state?.config || createDefaultConfig()) {
   const entries = {};
-  DEVICES[deviceKey].positions.forEach((position) => {
-    entries[position] = { paused: false, restDays: DEFAULT_REST_DAYS[deviceKey] };
+  config[deviceKey].positions.forEach((position) => {
+    entries[position] = { paused: false, restDays: config[deviceKey].defaultRestDays };
   });
   return entries;
 }
 
 function createInitialState() {
+  const config = createDefaultConfig();
   return {
+    config,
     current: null,
     history: [],
     sites: {
-      dex: createDefaultSiteState("dex"),
-      pod: createDefaultSiteState("pod"),
+      dex: createSiteStateForDevice("dex", config),
+      pod: createSiteStateForDevice("pod", config),
     },
     createdAt: new Date().toISOString(),
   };
 }
 
+function normalizeConfig(sourceConfig) {
+  const config = createDefaultConfig();
+  DEVICE_KEYS.forEach((deviceKey) => {
+    const source = sourceConfig?.[deviceKey] || {};
+    config[deviceKey] = {
+      ...config[deviceKey],
+      label: typeof source.label === "string" && source.label.trim() ? source.label.trim() : config[deviceKey].label,
+      intervalDays: Math.max(1, Math.min(30, Number(source.intervalDays) || config[deviceKey].intervalDays)),
+      positions: Array.isArray(source.positions) && source.positions.length
+        ? source.positions.map((value) => String(value).trim()).filter(Boolean)
+        : config[deviceKey].positions,
+    };
+  });
+  return config;
+}
+
+function normalizeSites(sourceSites, config) {
+  const nextSites = {};
+  DEVICE_KEYS.forEach((deviceKey) => {
+    nextSites[deviceKey] = {};
+    config[deviceKey].positions.forEach((position) => {
+      const existing = sourceSites?.[deviceKey]?.[position];
+      nextSites[deviceKey][position] = {
+        paused: Boolean(existing?.paused),
+        restDays: Math.max(1, Math.min(30, Number(existing?.restDays) || config[deviceKey].defaultRestDays)),
+      };
+    });
+  });
+  return nextSites;
+}
+
+function normalizeCurrent(sourceCurrent, config) {
+  if (!sourceCurrent) return null;
+  const nextCurrent = {};
+  DEVICE_KEYS.forEach((deviceKey) => {
+    const deviceCurrent = sourceCurrent[deviceKey];
+    const firstPosition = config[deviceKey].positions[0];
+    nextCurrent[deviceKey] = {
+      position: config[deviceKey].positions.includes(deviceCurrent?.position) ? deviceCurrent.position : firstPosition,
+      startAt: deviceCurrent?.startAt || `${isoDate(now())}T12:00`,
+    };
+  });
+  return nextCurrent;
+}
+
+function migrateState(savedState) {
+  const config = normalizeConfig(savedState.config || DEFAULT_CONFIG);
+  return {
+    config,
+    current: normalizeCurrent(savedState.current, config),
+    history: Array.isArray(savedState.history) ? savedState.history : [],
+    sites: normalizeSites(savedState.sites, config),
+    createdAt: savedState.createdAt || new Date().toISOString(),
+  };
+}
+
 function loadState() {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (!saved) return createInitialState();
-    return migrateState(saved);
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!raw) return createInitialState();
+    return migrateState(JSON.parse(raw));
   } catch (error) {
     return createInitialState();
   }
 }
 
-function migrateState(state) {
-  const next = createInitialState();
-  if (state.current) next.current = state.current;
-  if (Array.isArray(state.history)) next.history = state.history;
-
-  Object.keys(next.sites).forEach((deviceKey) => {
-    const source = state.sites?.[deviceKey] || {};
-    DEVICES[deviceKey].positions.forEach((position) => {
-      next.sites[deviceKey][position] = {
-        paused: Boolean(source[position]?.paused),
-        restDays: Number(source[position]?.restDays) || DEFAULT_REST_DAYS[deviceKey],
-      };
-    });
-  });
-
-  return next;
-}
-
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function syncStateWithConfig() {
+  state.sites = normalizeSites(state.sites, state.config);
+  state.current = normalizeCurrent(state.current, state.config);
 }
 
 function latestChangeFor(deviceKey, position) {
@@ -189,38 +254,41 @@ function reminderText(startAt, intervalDays) {
   };
 }
 
-function getEligiblePositions(deviceKey, excludePosition, targetDate) {
-  const positions = DEVICES[deviceKey].positions;
+function getEligiblePositions(deviceKey, excludePosition, targetDate, historyEntries = state.history) {
+  const positions = getDevice(deviceKey).positions;
   const target = parseDate(targetDate);
-  const options = positions.filter((position) => {
+
+  return positions.filter((position) => {
     if (position === excludePosition) return false;
     const siteState = state.sites[deviceKey][position];
-    if (siteState.paused) return false;
+    if (!siteState || siteState.paused) return false;
 
-    const latest = latestChangeFor(deviceKey, position);
+    const latest = historyEntries.find((entry) => entry.device === deviceKey && entry.to === position) || null;
     if (!latest) return true;
 
     const availableAt = addDays(parseDate(latest.at), siteState.restDays);
     return availableAt <= target;
   });
-
-  return options;
 }
 
-function suggestNextPosition(deviceKey, excludePosition, referenceDate) {
-  const currentPosition = state.current?.[deviceKey]?.position || "";
-  const ordered = DEVICES[deviceKey].positions.slice();
+function getSide(position) {
+  return position.toLowerCase().includes("link") ? "left" : "right";
+}
+
+function suggestNextPosition(deviceKey, excludePosition, referenceDate, historyEntries = state.history, currentPositionOverride) {
+  const currentPosition = currentPositionOverride || state.current?.[deviceKey]?.position || "";
+  const ordered = getDevice(deviceKey).positions.slice();
   const oppositeSideFirst = ordered.sort((a, b) => {
     const aScore = getSide(a) === getSide(currentPosition) ? 1 : 0;
     const bScore = getSide(b) === getSide(currentPosition) ? 1 : 0;
     return aScore - bScore;
   });
 
-  const eligible = getEligiblePositions(deviceKey, excludePosition, referenceDate);
+  const eligible = getEligiblePositions(deviceKey, excludePosition, referenceDate, historyEntries);
   const preferred = oppositeSideFirst.find((position) => eligible.includes(position));
   if (preferred) return preferred;
 
-  return ordered.find((position) => position !== excludePosition && !state.sites[deviceKey][position].paused) || currentPosition;
+  return ordered.find((position) => position !== excludePosition && !state.sites[deviceKey][position]?.paused) || currentPosition;
 }
 
 function makeHistoryEntry(deviceKey, fromPosition, toPosition, at, rating, note, tags) {
@@ -238,39 +306,58 @@ function makeHistoryEntry(deviceKey, fromPosition, toPosition, at, rating, note,
 
 function bootstrapHistoryFromCurrent() {
   if (!state.current || state.history.length > 0) return;
-  Object.keys(DEVICES).forEach((deviceKey) => {
+  DEVICE_KEYS.forEach((deviceKey) => {
     const currentEntry = state.current[deviceKey];
     state.history.unshift(
       makeHistoryEntry(deviceKey, currentEntry.position, currentEntry.position, currentEntry.startAt, 3, "Initialer Startwert", [])
     );
   });
+  state.history.sort((a, b) => new Date(b.at) - new Date(a.at));
   saveState();
 }
 
-function populateSetupSelects() {
-  Object.keys(DEVICES).forEach((deviceKey) => {
-    const select = document.getElementById(`${deviceKey}-pos`);
-    select.innerHTML = "";
-    DEVICES[deviceKey].positions.forEach((position) => {
-      const option = document.createElement("option");
-      option.value = position;
-      option.textContent = position;
-      select.appendChild(option);
-    });
+function populatePositionSelect(deviceKey, selectId) {
+  const select = document.getElementById(selectId);
+  select.innerHTML = "";
+  getDevice(deviceKey).positions.forEach((position) => {
+    const option = document.createElement("option");
+    option.value = position;
+    option.textContent = position;
+    select.appendChild(option);
   });
+}
+
+function populateStaticSelects() {
+  populatePositionSelect("dex", "dex-pos");
+  populatePositionSelect("pod", "pod-pos");
+}
+
+function populateChangeDeviceSelect() {
+  const select = document.getElementById("change-device");
+  const currentValue = select.value;
+  select.innerHTML = "";
+
+  getDevices().forEach((device) => {
+    const option = document.createElement("option");
+    option.value = device.key;
+    option.textContent = device.label;
+    select.appendChild(option);
+  });
+
+  select.value = DEVICE_KEYS.includes(currentValue) ? currentValue : DEVICE_KEYS[0];
 }
 
 function updateChangePositionOptions() {
   const deviceKey = document.getElementById("change-device").value;
   const select = document.getElementById("change-position");
   const currentPosition = state.current?.[deviceKey]?.position || "";
-  const referenceDate = document.getElementById("change-at").value || new Date().toISOString();
+  const referenceDate = document.getElementById("change-at").value || now().toISOString();
   const suggestion = suggestNextPosition(deviceKey, currentPosition, referenceDate);
 
   select.innerHTML = "";
-  DEVICES[deviceKey].positions.forEach((position) => {
+  getDevice(deviceKey).positions.forEach((position) => {
     const option = document.createElement("option");
-    const paused = state.sites[deviceKey][position].paused;
+    const paused = state.sites[deviceKey][position]?.paused;
     option.value = position;
     option.textContent = paused ? `${position} (pausiert)` : position;
     option.disabled = paused;
@@ -279,25 +366,44 @@ function updateChangePositionOptions() {
   });
 }
 
+function renderStaticLabels() {
+  document.getElementById("hero-eyebrow").textContent = getDevices().map((device) => device.label).join(" + ");
+  document.getElementById("dex-setup-label").textContent = getDevice("dex").label;
+  document.getElementById("pod-setup-label").textContent = getDevice("pod").label;
+  document.getElementById("dex-setup-interval").textContent = `Intervall ${getDevice("dex").intervalDays} Tage`;
+  document.getElementById("pod-setup-interval").textContent = `Intervall ${getDevice("pod").intervalDays} Tage`;
+  document.getElementById("config-dex-title").textContent = getDevice("dex").label;
+  document.getElementById("config-pod-title").textContent = getDevice("pod").label;
+}
+
+function renderConfigForm() {
+  DEVICE_KEYS.forEach((deviceKey) => {
+    const device = getDevice(deviceKey);
+    document.getElementById(`config-${deviceKey}-label`).value = device.label;
+    document.getElementById(`config-${deviceKey}-interval`).value = device.intervalDays;
+    document.getElementById(`config-${deviceKey}-positions`).value = device.positions.join("\n");
+  });
+}
+
 function renderStatus() {
   const wrapper = document.getElementById("status-grid");
   wrapper.innerHTML = "";
 
-  Object.keys(DEVICES).forEach((deviceKey) => {
-    const currentEntry = state.current?.[deviceKey];
+  getDevices().forEach((device) => {
+    const currentEntry = state.current?.[device.key];
     if (!currentEntry) return;
 
     const template = document.getElementById("status-card-template").content.firstElementChild.cloneNode(true);
-    template.querySelector(".device-chip").textContent = DEVICES[deviceKey].label;
-    template.querySelector(".device-chip").classList.add(DEVICES[deviceKey].colorClass);
+    template.querySelector(".device-chip").textContent = device.label;
+    template.querySelector(".device-chip").classList.add(device.colorClass);
     template.querySelector(".status-position").textContent = currentEntry.position;
 
-    const reminder = reminderText(currentEntry.startAt, DEVICES[deviceKey].intervalDays);
+    const reminder = reminderText(currentEntry.startAt, device.intervalDays);
     const reminderNode = template.querySelector(".status-reminder");
     reminderNode.textContent = reminder.label;
     reminderNode.classList.add(reminder.tone);
 
-    const latest = state.history.find((entry) => entry.device === deviceKey);
+    const latest = state.history.find((entry) => entry.device === device.key);
     const tags = latest?.tags?.length ? ` · ${latest.tags.join(", ")}` : "";
     template.querySelector(".status-meta").textContent = `Seit ${formatDate(currentEntry.startAt)} · ${reminder.meta}${tags}`;
 
@@ -305,84 +411,228 @@ function renderStatus() {
   });
 }
 
-function buildSchedule() {
+function buildSchedule(horizonDays = 60) {
   if (!state.current) return [];
 
   const items = [];
-  const horizon = addDays(startOfToday(), 45);
+  const simulatedHistory = [...state.history];
+  const horizon = addDays(startOfToday(), horizonDays);
 
-  Object.keys(DEVICES).forEach((deviceKey) => {
-    let startAt = parseDate(state.current[deviceKey].startAt);
-    let fromPosition = state.current[deviceKey].position;
+  getDevices().forEach((device) => {
+    let startAt = parseDate(state.current[device.key].startAt);
+    let fromPosition = state.current[device.key].position;
 
-    for (let i = 0; i < 6; i += 1) {
-      const dueAt = addDays(startAt, DEVICES[deviceKey].intervalDays);
+    for (let i = 0; i < 14; i += 1) {
+      const dueAt = addDays(startAt, device.intervalDays);
       if (dueAt > horizon) break;
 
-      const suggestion = suggestNextPosition(deviceKey, fromPosition, dueAt.toISOString());
-      const eligible = getEligiblePositions(deviceKey, fromPosition, dueAt.toISOString());
+      const eligible = getEligiblePositions(device.key, fromPosition, dueAt.toISOString(), simulatedHistory);
+      const suggestion = suggestNextPosition(device.key, fromPosition, dueAt.toISOString(), simulatedHistory, fromPosition);
 
       items.push({
-        id: `${deviceKey}-${i}`,
-        device: deviceKey,
+        id: `${device.key}-${i}-${dueAt.toISOString()}`,
+        device: device.key,
         dueAt,
         fromPosition,
         toPosition: suggestion,
         blocked: eligible.length === 0,
       });
 
+      simulatedHistory.unshift(
+        makeHistoryEntry(device.key, fromPosition, suggestion, dueAt.toISOString(), 0, "Geplanter Wechsel", [])
+      );
       startAt = dueAt;
       fromPosition = suggestion;
     }
   });
 
-  return items.sort((a, b) => a.dueAt - b.dueAt).slice(0, 10);
+  return items.sort((a, b) => a.dueAt - b.dueAt);
+}
+
+function groupScheduleByDay(schedule) {
+  const groups = [];
+  const byDay = new Map();
+
+  schedule.forEach((item) => {
+    const key = isoDate(item.dueAt);
+    if (!byDay.has(key)) {
+      const group = { key, date: item.dueAt, items: [] };
+      byDay.set(key, group);
+      groups.push(group);
+    }
+    byDay.get(key).items.push(item);
+  });
+
+  groups.forEach((group) => {
+    const sidesFrom = new Set(group.items.map((item) => getSide(item.fromPosition)));
+    const sidesTo = new Set(group.items.map((item) => getSide(item.toPosition)));
+    const hasBothDevices = new Set(group.items.map((item) => item.device)).size > 1;
+    const fromSide = sidesFrom.size === 1 ? [...sidesFrom][0] : null;
+    const toSide = sidesTo.size === 1 ? [...sidesTo][0] : null;
+
+    group.hasBothDevices = hasBothDevices;
+    group.isSideSwitch = Boolean(hasBothDevices && fromSide && toSide && fromSide !== toSide);
+    group.fromSide = fromSide;
+    group.toSide = toSide;
+  });
+
+  return groups;
+}
+
+function makePill(text, className = "") {
+  const node = document.createElement("span");
+  node.className = `pill ${className}`.trim();
+  node.textContent = text;
+  return node;
 }
 
 function renderTimeline() {
   const wrapper = document.getElementById("timeline");
-  const schedule = buildSchedule();
+  const schedule = buildSchedule(45);
+  const groupedSchedule = groupScheduleByDay(schedule);
   wrapper.innerHTML = "";
 
-  if (schedule.length === 0) {
+  if (groupedSchedule.length === 0) {
     wrapper.innerHTML = '<div class="empty-state">Sobald aktuelle Werte gesetzt sind, erscheinen hier die naechsten Wechsel.</div>';
     return;
   }
 
-  schedule.forEach((item) => {
+  groupedSchedule.slice(0, 10).forEach((group) => {
     const card = document.createElement("article");
-    card.className = "timeline-item";
+    card.className = `timeline-item${group.isSideSwitch ? " is-side-switch" : ""}`;
 
     const top = document.createElement("div");
     top.className = "timeline-top";
 
     const title = document.createElement("div");
-    title.innerHTML = `<p class="section-kicker">${DEVICES[item.device].label}</p><div class="timeline-title">${formatDateTime(item.dueAt)}</div>`;
+    title.innerHTML = `<p class="section-kicker">${group.hasBothDevices ? "Gemeinsamer Wechseltag" : getDevice(group.items[0].device).label}</p><div class="timeline-title">${formatDateTime(group.date)}</div>`;
 
     const tagWrap = document.createElement("div");
     tagWrap.className = "timeline-tags";
-    tagWrap.appendChild(makePill(item.blocked ? "keine freie Stelle" : item.toPosition));
+    if (group.isSideSwitch) {
+      tagWrap.appendChild(makePill(`Seitenwechsel ${group.fromSide === "left" ? "links" : "rechts"} -> ${group.toSide === "left" ? "links" : "rechts"}`, "is-collision"));
+    }
 
     top.appendChild(title);
     top.appendChild(tagWrap);
-
-    const meta = document.createElement("p");
-    meta.className = "timeline-meta";
-    meta.textContent = item.blocked
-      ? `Von ${item.fromPosition}. Alle anderen Positionen sind pausiert oder noch in Ruhezeit.`
-      : `Von ${item.fromPosition} nach ${item.toPosition}.`;
-
     card.appendChild(top);
-    card.appendChild(meta);
+
+    group.items.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "timeline-entry";
+
+      const label = document.createElement("p");
+      label.className = "timeline-meta";
+      label.textContent = `${getDevice(item.device).label}: ${item.blocked
+        ? `von ${item.fromPosition}. Alle anderen Positionen sind pausiert oder noch in Ruhezeit.`
+        : `von ${item.fromPosition} nach ${item.toPosition}.`}`;
+
+      row.appendChild(label);
+      card.appendChild(row);
+    });
+
     wrapper.appendChild(card);
   });
 }
 
-function makePill(text) {
-  const node = document.createElement("span");
-  node.className = "pill";
-  node.textContent = text;
-  return node;
+function buildCalendarMonths(offset) {
+  const anchor = addMonths(startOfMonth(now()), offset);
+  return [anchor, addMonths(anchor, 1)];
+}
+
+function eventsByDay(schedule, monthDate) {
+  const start = startOfMonth(monthDate);
+  const end = endOfMonth(monthDate);
+  const map = new Map();
+
+  schedule.forEach((item) => {
+    if (item.dueAt < start || item.dueAt > end) return;
+    const key = isoDate(item.dueAt);
+    if (!map.has(key)) map.set(key, { items: [] });
+    map.get(key).items.push(item);
+  });
+
+  map.forEach((group, key) => {
+    const dayGroups = groupScheduleByDay(group.items);
+    map.set(key, dayGroups[0]);
+  });
+
+  return map;
+}
+
+function renderCalendar() {
+  const wrapper = document.getElementById("calendar-wrap");
+  const schedule = buildSchedule(90);
+  const months = buildCalendarMonths(calendarMonthOffset);
+  wrapper.innerHTML = "";
+
+  months.forEach((monthDate) => {
+    const card = document.createElement("section");
+    card.className = "calendar-card";
+
+    const title = document.createElement("div");
+    title.className = "calendar-head";
+    title.innerHTML = `<h4>${formatMonth(monthDate)}</h4><p class="panel-note">Geplante Wechsel und Kollisionen im Monatsraster.</p>`;
+    card.appendChild(title);
+
+    const weekdays = document.createElement("div");
+    weekdays.className = "calendar-weekdays";
+    ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].forEach((label) => {
+      const node = document.createElement("div");
+      node.textContent = label;
+      weekdays.appendChild(node);
+    });
+    card.appendChild(weekdays);
+
+    const grid = document.createElement("div");
+    grid.className = "calendar-grid";
+
+    const monthStart = startOfMonth(monthDate);
+    const monthEnd = endOfMonth(monthDate);
+    const offset = (monthStart.getDay() + 6) % 7;
+    const firstGridDate = addDays(monthStart, -offset);
+    const dayEvents = eventsByDay(schedule, monthDate);
+
+    for (let index = 0; index < 42; index += 1) {
+      const currentDate = addDays(firstGridDate, index);
+      const dayKey = isoDate(currentDate);
+      const dayGroup = dayEvents.get(dayKey);
+      const events = dayGroup?.items || [];
+      const isOutside = currentDate.getMonth() !== monthDate.getMonth();
+      const isToday = dayKey === isoDate(now());
+
+      const cell = document.createElement("article");
+      cell.className = `calendar-day${isOutside ? " is-outside" : ""}${isToday ? " is-today" : ""}${dayGroup?.isSideSwitch ? " is-side-switch" : ""}`;
+
+      const dayNumber = document.createElement("div");
+      dayNumber.className = "calendar-day-number";
+      dayNumber.textContent = String(currentDate.getDate());
+      cell.appendChild(dayNumber);
+
+      const eventList = document.createElement("div");
+      eventList.className = "calendar-events";
+      events.slice(0, 3).forEach((event) => {
+        const pill = makePill(getDevice(event.device).label, `is-${getDevice(event.device).colorClass}`);
+        eventList.appendChild(pill);
+      });
+
+      if (events.length > 3) {
+        eventList.appendChild(makePill(`+${events.length - 3} mehr`));
+      }
+
+      if (dayGroup?.isSideSwitch) {
+        eventList.appendChild(makePill("Seitenwechsel", "is-collision"));
+      } else if (events.length > 1) {
+        eventList.appendChild(makePill("Kollision", "is-collision"));
+      }
+
+      cell.appendChild(eventList);
+      grid.appendChild(cell);
+    }
+
+    card.appendChild(grid);
+    wrapper.appendChild(card);
+  });
 }
 
 function renderHistory() {
@@ -402,7 +652,7 @@ function renderHistory() {
     top.className = "history-top";
 
     const title = document.createElement("div");
-    title.innerHTML = `<div class="history-title">${DEVICES[entry.device].label}: ${entry.to}</div><div class="history-meta">${formatDateTime(entry.at)} · von ${entry.from}</div>`;
+    title.innerHTML = `<div class="history-title">${getDevice(entry.device).label}: ${entry.to}</div><div class="history-meta">${formatDateTime(entry.at)} · von ${entry.from}</div>`;
 
     const rating = document.createElement("div");
     rating.className = "rating";
@@ -433,26 +683,26 @@ function renderSettings() {
   const wrapper = document.getElementById("settings-grid");
   wrapper.innerHTML = "";
 
-  Object.keys(DEVICES).forEach((deviceKey) => {
+  getDevices().forEach((device) => {
     const card = document.createElement("article");
     card.className = "setting-card";
-    card.innerHTML = `<div class="setting-top"><div><p class="section-kicker">${DEVICES[deviceKey].label}</p><h3>Verfuegbare Positionen</h3></div><p class="setting-note">Ruhezeit pro Stelle in Tagen.</p></div>`;
+    card.innerHTML = `<div class="setting-top"><div><p class="section-kicker">${device.label}</p><h3>Verfuegbare Positionen</h3></div><p class="setting-note">Ruhezeit pro Stelle in Tagen.</p></div>`;
 
-    DEVICES[deviceKey].positions.forEach((position) => {
+    device.positions.forEach((position) => {
       const row = document.createElement("div");
       row.className = "toggle-row";
 
-      const siteState = state.sites[deviceKey][position];
-      const latest = latestChangeFor(deviceKey, position);
+      const siteState = state.sites[device.key][position];
+      const latest = latestChangeFor(device.key, position);
       const latestText = latest ? `Zuletzt genutzt: ${formatDate(latest.at)}` : "Noch nicht genutzt";
 
       const label = document.createElement("label");
       label.className = "toggle";
-      label.innerHTML = `<input type="checkbox" data-kind="paused" data-device="${deviceKey}" data-position="${position}" ${siteState.paused ? "checked" : ""}><span>${position} pausieren</span>`;
+      label.innerHTML = `<input type="checkbox" data-kind="paused" data-device="${device.key}" data-position="${position}" ${siteState.paused ? "checked" : ""}><span>${position} pausieren</span>`;
 
       const rest = document.createElement("label");
       rest.className = "toggle";
-      rest.innerHTML = `<span>Ruhezeit</span><input type="number" min="1" max="30" value="${siteState.restDays}" data-kind="rest" data-device="${deviceKey}" data-position="${position}" style="width:76px"></label>`;
+      rest.innerHTML = `<span>Ruhezeit</span><input type="number" min="1" max="30" value="${siteState.restDays}" data-kind="rest" data-device="${device.key}" data-position="${position}" style="width:76px"></label>`;
 
       const meta = document.createElement("div");
       meta.className = "setting-note";
@@ -475,10 +725,15 @@ function renderVisibility() {
 }
 
 function renderAll() {
+  renderStaticLabels();
+  renderConfigForm();
   renderVisibility();
+  populateStaticSelects();
+  populateChangeDeviceSelect();
   if (!state.current) return;
   renderStatus();
   renderTimeline();
+  renderCalendar();
   renderHistory();
   renderSettings();
   updateChangePositionOptions();
@@ -549,6 +804,41 @@ function handleChangeSubmit(event) {
   renderAll();
 }
 
+function parsePositions(value) {
+  return value
+    .split(/\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((item, index, array) => array.indexOf(item) === index);
+}
+
+function handleConfigSubmit(event) {
+  event.preventDefault();
+  const nextConfig = createDefaultConfig();
+
+  DEVICE_KEYS.forEach((deviceKey) => {
+    const label = document.getElementById(`config-${deviceKey}-label`).value.trim();
+    const intervalDays = Math.max(1, Math.min(30, Number(document.getElementById(`config-${deviceKey}-interval`).value) || getDevice(deviceKey).intervalDays));
+    const positions = parsePositions(document.getElementById(`config-${deviceKey}-positions`).value);
+
+    if (!label || positions.length === 0) {
+      throw new Error(`${deviceKey} config invalid`);
+    }
+
+    nextConfig[deviceKey] = {
+      ...nextConfig[deviceKey],
+      label,
+      intervalDays,
+      positions,
+    };
+  });
+
+  state.config = nextConfig;
+  syncStateWithConfig();
+  saveState();
+  renderAll();
+}
+
 function resetChangeForm() {
   document.getElementById("change-note").value = "";
   document.getElementById("change-rating").value = "3";
@@ -588,7 +878,7 @@ function handleSettingsChange(event) {
   }
 
   if (kind === "rest") {
-    const restDays = Math.max(1, Math.min(30, Number(target.value) || DEFAULT_REST_DAYS[deviceKey]));
+    const restDays = Math.max(1, Math.min(30, Number(target.value) || getDevice(deviceKey).defaultRestDays));
     state.sites[deviceKey][position].restDays = restDays;
     target.value = restDays;
   }
@@ -607,11 +897,42 @@ function exportState() {
   URL.revokeObjectURL(url);
 }
 
+function escapeCsv(value) {
+  const text = String(value ?? "");
+  if (/[",\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function exportCsv() {
+  const header = ["geraet", "zeitpunkt", "von", "nach", "rating", "tags", "notiz"];
+  const rows = state.history.map((entry) => [
+    getDevice(entry.device).label,
+    formatDateTime(entry.at),
+    entry.from,
+    entry.to,
+    entry.rating,
+    (entry.tags || []).join(" | "),
+    entry.note || "",
+  ]);
+
+  const content = [header, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\n");
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `cgm-tracker-history-${isoDate(now())}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function resetTracker() {
   const confirmed = confirm("Tracker und Logbuch wirklich zuruecksetzen?");
   if (!confirmed) return;
 
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(LEGACY_STORAGE_KEY);
   state = createInitialState();
   seedSetupDefaults();
   renderAll();
@@ -626,27 +947,46 @@ function seedSetupDefaults() {
   document.getElementById("dex-date").min = minDate;
   document.getElementById("pod-date").min = minDate;
 
-  document.getElementById("dex-pos").value = "Rechter Arm";
-  document.getElementById("pod-pos").value = "Rechter Bauch";
+  document.getElementById("dex-pos").value = getDevice("dex").positions[0];
+  document.getElementById("pod-pos").value = getDevice("pod").positions[0];
   document.getElementById("dex-date").value = todayValue;
   document.getElementById("pod-date").value = todayValue;
+}
+
+function shiftCalendar(amount) {
+  calendarMonthOffset += amount;
+  renderCalendar();
 }
 
 function attachEvents() {
   document.getElementById("setup-form").addEventListener("submit", handleSetupSubmit);
   document.getElementById("change-form").addEventListener("submit", handleChangeSubmit);
+  document.getElementById("config-form").addEventListener("submit", (event) => {
+    try {
+      handleConfigSubmit(event);
+    } catch (error) {
+      alert("Bitte fuer beide Geraeteslots Namen und mindestens eine Position angeben.");
+    }
+  });
   document.getElementById("change-device").addEventListener("change", updateChangePositionOptions);
   document.getElementById("change-at").addEventListener("change", updateChangePositionOptions);
   document.getElementById("tag-group").addEventListener("click", handleTagClicks);
   document.getElementById("settings-grid").addEventListener("change", handleSettingsChange);
   document.getElementById("export-json").addEventListener("click", exportState);
+  document.getElementById("export-csv").addEventListener("click", exportCsv);
   document.getElementById("reset-btn").addEventListener("click", resetTracker);
+  document.getElementById("calendar-prev").addEventListener("click", () => shiftCalendar(-1));
+  document.getElementById("calendar-next").addEventListener("click", () => shiftCalendar(1));
 }
 
 let state = loadState();
 
 function init() {
-  populateSetupSelects();
+  syncStateWithConfig();
+  populateStaticSelects();
+  populateChangeDeviceSelect();
+  renderStaticLabels();
+  renderConfigForm();
   seedSetupDefaults();
   bootstrapHistoryFromCurrent();
   attachEvents();
@@ -656,6 +996,7 @@ function init() {
   }
 
   renderAll();
+  saveState();
 }
 
 init();

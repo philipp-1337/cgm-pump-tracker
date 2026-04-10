@@ -19,21 +19,21 @@ Symptom- oder Vertraeglichkeitsrating
 Ist umgesetzt. Wechsel koennen mit 1 bis 5 Sternen sowie Tags wie "reizfrei" oder "druckempfindlich" gespeichert werden.
 
 Export / Backup
-JSON-Export ist umgesetzt. CSV waere noch ein moeglicher naechster Schritt.
+JSON- und CSV-Export sind umgesetzt.
 
 Kleine Tageslogik verbessern
 Ist umgesetzt. Das Startdatum wird jetzt konsistent auf heute gesetzt und nicht mehr auf morgen vorbelegt.
 
-Noch offen
+Neu umgesetzt
 
 Kalenderansicht
-Die Timeline ist vorhanden, aber eine echte Monatsansicht fehlt noch.
+Ist umgesetzt. Es gibt jetzt eine Monatsansicht mit Navigation und sichtbaren Kollisionen.
 
 Konfigurierbare Geraete
-Intervalle und Positionslisten sind aktuell noch fest fuer Dexcom G7 und Omnipod 5 hinterlegt.
+Ist umgesetzt. Namen, Intervalle und Positionslisten lassen sich jetzt direkt in der App anpassen.
 
 Moegliche naechste Schritte
 
-CSV-Export zusaetzlich zum JSON-Backup
-Monatsansicht mit Kollisionen und Mustern
-Geraete, Intervalle und Positionslisten komplett editierbar machen
+Import fuer JSON- oder CSV-Backups
+Mehr als zwei Geraeteslots statt der festen zwei Tracker-Slots
+Auswertungen ueber Lieblingsstellen oder problematische Positionen
