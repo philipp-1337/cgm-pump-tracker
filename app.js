@@ -69,6 +69,12 @@ function isoDateTimeLocal(value) {
   return local.toISOString().slice(0, 16);
 }
 
+function roundToNearestMinutes(value, minutes) {
+  const copy = new Date(value);
+  const stepMs = minutes * 60000;
+  return new Date(Math.round(copy.getTime() / stepMs) * stepMs);
+}
+
 function formatDate(value) {
   return new Date(value).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
@@ -545,7 +551,7 @@ function renderTimeline() {
 
 function buildCalendarMonths(offset) {
   const anchor = addMonths(startOfMonth(now()), offset);
-  return [anchor, addMonths(anchor, 1)];
+  return window.innerWidth <= 860 ? [anchor] : [anchor, addMonths(anchor, 1)];
 }
 
 function eventsByDay(schedule, monthDate) {
@@ -760,11 +766,11 @@ function handleSetupSubmit(event) {
   state.current = {
     dex: {
       position: document.getElementById("dex-pos").value,
-      startAt: `${dexDate}T12:00`,
+      startAt: dexDate,
     },
     pod: {
       position: document.getElementById("pod-pos").value,
-      startAt: `${podDate}T12:00`,
+      startAt: podDate,
     },
   };
 
@@ -948,8 +954,9 @@ function resetTracker() {
 }
 
 function seedSetupDefaults() {
-  const todayValue = isoDate(now());
-  const minDate = isoDate(addDays(now(), -365));
+  const nowValue = roundToNearestMinutes(now(), 5);
+  const todayValue = isoDateTimeLocal(nowValue);
+  const minDate = isoDateTimeLocal(addDays(nowValue, -365));
 
   document.getElementById("dex-date").max = todayValue;
   document.getElementById("pod-date").max = todayValue;
@@ -990,6 +997,7 @@ function attachEvents() {
     const menu = document.querySelector(".action-menu");
     if (window.innerWidth <= 860) menu.removeAttribute("open");
   });
+  window.addEventListener("resize", renderCalendar);
 }
 
 let state = loadState();
