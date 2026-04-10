@@ -1,639 +1,195 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0f0f13">
-<title>CGM & Pod Tracker</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700&display=swap');
-
-  :root {
-    --bg: #0f0f13;
-    --surface: #16161d;
-    --surface2: #1e1e28;
-    --border: #2a2a38;
-    --dex: #4fc3f7;
-    --pod: #a78bfa;
-    --text: #e8e8f0;
-    --muted: #6b6b80;
-    --warn: #f97316;
-    --ok: #34d399;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Syne', sans-serif;
-    min-height: 100vh;
-    padding: 28px 16px 60px;
-    max-width: 480px;
-    margin: 0 auto;
-  }
-
-  header { margin-bottom: 28px; }
-
-  header h1 {
-    font-size: 1.45rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--text);
-  }
-
-  header p {
-    font-size: 0.72rem;
-    color: var(--muted);
-    margin-top: 4px;
-  }
-
-  /* ── SETUP ── */
-  .setup-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 20px;
-    margin-bottom: 12px;
-  }
-
-  .device-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-
-  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .dot-dex { background: var(--dex); }
-  .dot-pod { background: var(--pod); }
-
-  .device-row .name     { font-size: 0.88rem; font-weight: 700; }
-  .device-row .interval { margin-left: auto; font-size: 0.68rem; color: var(--muted); }
-
-  .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
-
-  .field-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
-  .field-row:last-child { margin-bottom: 0; }
-
-  label { font-size: 0.7rem; color: var(--muted); }
-
-  select, input[type="date"] {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.85rem;
-    padding: 10px 12px;
-    width: 100%;
-    appearance: none;
-    outline: none;
-  }
-  select:focus, input[type="date"]:focus { border-color: var(--pod); }
-
-  .btn-primary {
-    width: 100%;
-    padding: 13px;
-    background: var(--pod);
-    border: none;
-    border-radius: 10px;
-    color: #0f0f13;
-    font-family: 'Syne', sans-serif;
-    font-size: 0.95rem;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 4px;
-    transition: transform 0.1s, opacity 0.1s;
-  }
-  .btn-primary:active { transform: translateY(1px); opacity: 0.9; }
-
-  /* ── TRACKER ── */
-  #tracker { display: none; }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .tracker-enter { animation: fadeUp 0.28s cubic-bezier(0.25, 1, 0.5, 1) both; }
-
-  /* ── STATUS GRID ── */
-  .status-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 28px;
-  }
-
-  .status-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-  }
-
-  .sc-label { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; }
-  .sc-label.dex { color: var(--dex); }
-  .sc-label.pod { color: var(--pod); }
-
-  .sc-position { font-size: 0.92rem; font-weight: 700; line-height: 1.3; }
-
-  .sc-days { font-size: 0.7rem; color: var(--muted); }
-
-  .sc-days .num {
-    font-family: 'DM Mono', monospace;
-    font-size: 1.05rem;
-    font-weight: 500;
-  }
-  .sc-days .num.urgent   { color: var(--warn); }
-  .sc-days .num.soon     { color: #fbbf24; }
-  .sc-days .num.ok       { color: var(--ok); }
-  .sc-days .num.due      { color: var(--warn); font-size: 0.78rem; font-weight: 700; }
-  .sc-days .num.overdue  { color: #ef4444; }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.45; }
-  }
-  .num.urgent  { animation: pulse 1.6s ease-in-out infinite; }
-  .num.due     { animation: pulse 1.2s ease-in-out infinite; }
-  .num.overdue { animation: pulse 1.2s ease-in-out infinite; }
-
-  /* ── CHANGE BUTTON ── */
-  .btn-change {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    color: var(--muted);
-    font-family: 'Syne', sans-serif;
-    font-size: 0.68rem;
-    font-weight: 700;
-    padding: 6px 10px;
-    cursor: pointer;
-    width: 100%;
-    text-align: center;
-    transition: color 0.15s, border-color 0.15s, transform 0.1s;
-    margin-top: 2px;
-  }
-  .btn-change:hover { color: var(--text); border-color: var(--muted); }
-  .btn-change:active { transform: scale(0.97); }
-
-  .btn-change.confirmed {
-    color: var(--ok);
-    border-color: var(--ok);
-    background: rgba(52, 211, 153, 0.08);
-  }
-
-  /* ── TIMELINE ── */
-  .section-label {
-    font-size: 0.62rem;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-
-  .timeline { display: flex; flex-direction: column; gap: 7px; margin-bottom: 32px; }
-
-  .tl-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 12px 14px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-  }
-  .tl-item.side-switch { border-color: rgba(167, 139, 250, 0.35); }
-
-  .tl-date { flex-shrink: 0; min-width: 46px; }
-  .tl-date .day {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text);
-    display: block;
-  }
-  .today-tag    { display: block; font-size: 0.58rem; color: var(--dex); margin-top: 2px; }
-  .tomorrow-tag { display: block; font-size: 0.58rem; color: var(--pod); margin-top: 2px; }
-
-  .tl-body { flex: 1; }
-
-  .tl-device { font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; }
-  .tl-device.dex  { color: var(--dex); }
-  .tl-device.pod  { color: var(--pod); }
-  .tl-device.both { color: var(--text); }
-
-  .tl-pos  { font-size: 0.88rem; font-weight: 600; }
-  .tl-pos + .tl-pos { margin-top: 1px; }
-  .tl-note { font-size: 0.67rem; color: var(--muted); margin-top: 2px; }
-
-  .tl-switch-icon { font-size: 0.72rem; color: var(--pod); align-self: center; flex-shrink: 0; }
-
-  /* ── RESET ── */
-  .btn-reset {
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-family: 'Syne', sans-serif;
-    font-size: 0.75rem;
-    cursor: pointer;
-    padding: 4px 0;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    display: block;
-  }
-
-  /* ── REDUCED MOTION ── */
-  @media (prefers-reduced-motion: reduce) {
-    .tracker-enter      { animation: none; }
-    .num.urgent,
-    .num.due,
-    .num.overdue        { animation: none; }
-    .btn-primary,
-    .btn-change         { transition: none; }
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f1720">
+  <title>CGM & Pod Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Dexcom G7 + Omnipod 5</p>
+        <h1>Tracker fuer Wechsel, Historie und bessere Stellenrotation</h1>
+        <p class="hero-text">Plant Wechsel, speichert echte Eintraege und beruecksichtigt Ruhezeiten, gesperrte Stellen und Notizen.</p>
+      </div>
+      <div class="hero-badge">
+        <span>Local-first</span>
+        <strong>im Browser gespeichert</strong>
+      </div>
+    </header>
 
-<header>
-  <h1>CGM & Pod Tracker</h1>
-  <p>Dexcom G7 · Omnipod 5</p>
-</header>
+    <main class="layout">
+      <section class="panel setup-panel" id="setup-panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-kicker">Setup</p>
+            <h2>Aktuelle Basis setzen</h2>
+          </div>
+          <p class="panel-note">Der Startpunkt fuer Planung und Verlauf.</p>
+        </div>
 
-<!-- SETUP -->
-<div id="setup">
-  <div class="setup-card">
+        <form id="setup-form" class="stack-lg">
+          <div class="device-grid">
+            <article class="device-card">
+              <div class="device-head">
+                <div class="device-chip dex">Dexcom G7</div>
+                <span>Intervall 10 Tage</span>
+              </div>
+              <label class="field">
+                <span>Aktuelle Position</span>
+                <select id="dex-pos" name="dex-pos"></select>
+              </label>
+              <label class="field">
+                <span>Gesetzt am</span>
+                <input type="date" id="dex-date" name="dex-date">
+              </label>
+            </article>
 
-    <div class="device-row">
-      <div class="dot dot-dex"></div>
-      <span class="name">Dexcom G7</span>
-      <span class="interval">alle 10 Tage</span>
-    </div>
-    <div class="field-row">
-      <label for="dex-pos">Aktuelle Position</label>
-      <select id="dex-pos">
-        <option value="Rechter Arm">Rechter Arm</option>
-        <option value="Linker Arm">Linker Arm</option>
-        <option value="Rechter Bauch">Rechter Bauch</option>
-        <option value="Linker Bauch">Linker Bauch</option>
-      </select>
-    </div>
-    <div class="field-row">
-      <label for="dex-date">Gesetzt am</label>
-      <input type="date" id="dex-date">
-    </div>
+            <article class="device-card">
+              <div class="device-head">
+                <div class="device-chip pod">Omnipod 5</div>
+                <span>Intervall 3 Tage</span>
+              </div>
+              <label class="field">
+                <span>Aktuelle Position</span>
+                <select id="pod-pos" name="pod-pos"></select>
+              </label>
+              <label class="field">
+                <span>Gesetzt am</span>
+                <input type="date" id="pod-date" name="pod-date">
+              </label>
+            </article>
+          </div>
 
-    <hr class="divider">
+          <div class="actions">
+            <button type="submit" class="btn btn-primary">Tracker starten</button>
+          </div>
+        </form>
+      </section>
 
-    <div class="device-row">
-      <div class="dot dot-pod"></div>
-      <span class="name">Omnipod 5</span>
-      <span class="interval">alle 3 Tage</span>
-    </div>
-    <div class="field-row">
-      <label for="pod-pos">Aktuelle Position</label>
-      <select id="pod-pos">
-        <option value="Rechtes Bein">Rechtes Bein</option>
-        <option value="Linkes Bein">Linkes Bein</option>
-        <option value="Rechter Bauch">Rechter Bauch</option>
-        <option value="Linker Bauch">Linker Bauch</option>
-        <option value="Rechter Arm">Rechter Arm</option>
-        <option value="Linker Arm">Linker Arm</option>
-      </select>
-    </div>
-    <div class="field-row">
-      <label for="pod-date">Gesetzt am</label>
-      <input type="date" id="pod-date">
-    </div>
+      <section class="panel tracker-panel" id="tracker-panel" hidden>
+        <div class="panel-head">
+          <div>
+            <p class="section-kicker">Uebersicht</p>
+            <h2>Aktueller Status</h2>
+          </div>
+          <div class="button-row">
+            <button type="button" class="btn btn-secondary" id="export-json">JSON exportieren</button>
+            <button type="button" class="btn btn-ghost" id="reset-btn">Neu einrichten</button>
+          </div>
+        </div>
 
+        <div class="status-grid" id="status-grid"></div>
+
+        <section class="subsection">
+          <div class="subsection-head">
+            <div>
+              <p class="section-kicker">Naechste Wechsel</p>
+              <h3>Planung mit Ruhezeit und Stellenstatus</h3>
+            </div>
+            <p class="panel-note">Pausierte oder noch nicht erholte Positionen werden uebersprungen.</p>
+          </div>
+          <div class="timeline" id="timeline"></div>
+        </section>
+
+        <section class="subsection">
+          <div class="subsection-head">
+            <div>
+              <p class="section-kicker">Neuer Eintrag</p>
+              <h3>Wechsel dokumentieren</h3>
+            </div>
+            <p class="panel-note">Echte Wechsel mit Rating, Tags und Notiz.</p>
+          </div>
+
+          <form id="change-form" class="change-form">
+            <div class="form-columns">
+              <label class="field">
+                <span>Geraet</span>
+                <select id="change-device" name="change-device">
+                  <option value="dex">Dexcom G7</option>
+                  <option value="pod">Omnipod 5</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Neue Position</span>
+                <select id="change-position" name="change-position"></select>
+              </label>
+              <label class="field">
+                <span>Wechselzeit</span>
+                <input type="datetime-local" id="change-at" name="change-at">
+              </label>
+              <label class="field">
+                <span>Vertraeglichkeit</span>
+                <select id="change-rating" name="change-rating">
+                  <option value="5">5 - sehr gut</option>
+                  <option value="4">4 - gut</option>
+                  <option value="3" selected>3 - okay</option>
+                  <option value="2">2 - eher schwierig</option>
+                  <option value="1">1 - schlecht</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="tag-group" id="tag-group">
+              <button type="button" class="tag-btn" data-tag="reizfrei">reizfrei</button>
+              <button type="button" class="tag-btn" data-tag="druckempfindlich">druckempfindlich</button>
+              <button type="button" class="tag-btn" data-tag="schlechte Haftung">schlechte Haftung</button>
+              <button type="button" class="tag-btn" data-tag="Sport stoert">Sport stoert</button>
+            </div>
+
+            <label class="field">
+              <span>Freie Notiz</span>
+              <textarea id="change-note" name="change-note" rows="3" placeholder="z. B. hat schlecht gehalten oder Werte waren unruhig"></textarea>
+            </label>
+
+            <div class="actions">
+              <button type="submit" class="btn btn-primary">Wechsel speichern</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="subsection">
+          <div class="subsection-head">
+            <div>
+              <p class="section-kicker">Stellenverwaltung</p>
+              <h3>Pause und Ruhezeit</h3>
+            </div>
+            <p class="panel-note">Positionen temporaer sperren und Mindestabstand steuern.</p>
+          </div>
+          <div class="settings-grid" id="settings-grid"></div>
+        </section>
+
+        <section class="subsection">
+          <div class="subsection-head">
+            <div>
+              <p class="section-kicker">Logbuch</p>
+              <h3>Letzte Eintraege</h3>
+            </div>
+            <p class="panel-note">Jeder Wechsel bleibt im Verlauf erhalten.</p>
+          </div>
+          <div class="history-list" id="history-list"></div>
+        </section>
+      </section>
+    </main>
   </div>
 
-  <button class="btn-primary" onclick="startTracker()">Plan berechnen →</button>
-</div>
+  <template id="status-card-template">
+    <article class="status-card">
+      <div class="status-top">
+        <div class="device-chip"></div>
+        <span class="status-position"></span>
+      </div>
+      <div class="status-reminder"></div>
+      <div class="status-meta"></div>
+    </article>
+  </template>
 
-<!-- TRACKER -->
-<div id="tracker">
-
-  <div class="status-grid">
-    <div class="status-card">
-      <div class="sc-label dex">Dexcom G7</div>
-      <div class="sc-position" id="cur-dex-pos">–</div>
-      <div class="sc-days" id="cur-dex-days-wrap">Noch <span class="num" id="cur-dex-days">–</span> Tage</div>
-      <button class="btn-change" id="btn-change-dex" onclick="changeDevice('dex')">Jetzt gewechselt</button>
-    </div>
-    <div class="status-card">
-      <div class="sc-label pod">Omnipod 5</div>
-      <div class="sc-position" id="cur-pod-pos">–</div>
-      <div class="sc-days" id="cur-pod-days-wrap">Noch <span class="num" id="cur-pod-days">–</span> Tage</div>
-      <button class="btn-change" id="btn-change-pod" onclick="changeDevice('pod')">Jetzt gewechselt</button>
-    </div>
-  </div>
-
-  <div class="section-label">Nächste Wechsel</div>
-  <div class="timeline" id="timeline"></div>
-
-  <button class="btn-reset" onclick="resetTracker()">↺ Neu einrichten</button>
-</div>
-
-<script>
-const DEX_INTERVAL = 10;
-const POD_INTERVAL = 3;
-
-const DEX_POSITIONS = {
-  right: ['Rechter Arm', 'Rechter Bauch'],
-  left:  ['Linker Arm',  'Linker Bauch'],
-};
-const POD_POSITIONS = {
-  right: ['Rechtes Bein', 'Rechter Bauch', 'Rechter Arm'],
-  left:  ['Linkes Bein',  'Linker Bauch',  'Linker Arm'],
-};
-
-function getSide(pos) {
-  return pos.toLowerCase().includes('link') ? 'left' : 'right';
-}
-function oppSide(side) { return side === 'right' ? 'left' : 'right'; }
-
-function nextInPool(pool, lastPos) {
-  const idx = pool.indexOf(lastPos);
-  return pool[(idx + 1) % pool.length];
-}
-
-function addDays(date, n) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d;
-}
-
-function dateStr(d) { return d.toISOString().split('T')[0]; }
-
-function formatDate(d) {
-  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-}
-
-function today() { return new Date(new Date().toDateString()); }
-
-function el(tag, cls) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  return e;
-}
-function txt(tag, cls, text) {
-  const e = el(tag, cls);
-  e.textContent = text;
-  return e;
-}
-
-// Returns days until the next upcoming change (>= today).
-// Returns 0 if today IS a change day.
-function daysUntilNext(startDate, interval) {
-  let next = new Date(startDate);
-  next.setDate(next.getDate() + interval);
-  while (next < today()) next.setDate(next.getDate() + interval);
-  return Math.round((next - today()) / 86400000);
-}
-
-// Returns display info for the days counter.
-function getStatusInfo(startDate, interval) {
-  const t = today();
-  const daysUsed = Math.max(0, Math.floor((t - startDate) / 86400000));
-  const cyclesPassed = Math.floor(daysUsed / interval);
-
-  if (cyclesPassed > 0) {
-    // Device has reached at least one scheduled change
-    const lastExpected = addDays(startDate, cyclesPassed * interval);
-    const overdueDays = Math.round((t - lastExpected) / 86400000);
-
-    if (overdueDays === 0) {
-      return { html: null, text: 'Heute wechseln', state: 'due' };
-    }
-    return {
-      html: null,
-      text: overdueDays + (overdueDays === 1 ? ' Tag überfällig' : ' Tage überfällig'),
-      state: 'overdue',
-    };
-  }
-
-  // Still within first cycle
-  const daysLeft = interval - daysUsed;
-  if (daysLeft === 0) {
-    return { text: 'Heute wechseln', state: 'due' };
-  }
-  return {
-    text: daysLeft.toString(),
-    state: daysLeft <= 1 ? 'urgent' : daysLeft <= 2 ? 'soon' : 'ok',
-    suffix: ' ' + (daysLeft === 1 ? 'Tag' : 'Tage'),
-  };
-}
-
-function renderDaysCell(wrapId, numId, startDate, interval) {
-  const wrap = document.getElementById(wrapId);
-  const numEl = document.getElementById(numId);
-  const info = getStatusInfo(new Date(startDate), interval);
-
-  if (info.state === 'due' || info.state === 'overdue') {
-    wrap.textContent = '';
-    const span = txt('span', 'num ' + info.state, info.text);
-    wrap.appendChild(span);
-  } else {
-    wrap.textContent = 'Noch ';
-    numEl.textContent = info.text;
-    numEl.className = 'num ' + info.state;
-    wrap.appendChild(numEl);
-    wrap.appendChild(document.createTextNode(info.suffix || ' Tage'));
-  }
-}
-
-function startTracker() {
-  const dexPos  = document.getElementById('dex-pos').value;
-  const dexDate = new Date(document.getElementById('dex-date').value);
-  const podPos  = document.getElementById('pod-pos').value;
-  const podDate = new Date(document.getElementById('pod-date').value);
-
-  if (isNaN(dexDate) || isNaN(podDate)) {
-    alert('Bitte beide Daten eingeben.');
-    return;
-  }
-
-  const state = { dexPos, dexDate: dateStr(dexDate), podPos, podDate: dateStr(podDate) };
-  localStorage.setItem('cgm-tracker', JSON.stringify(state));
-  renderTracker(state, true);
-}
-
-function changeDevice(device) {
-  const state = JSON.parse(localStorage.getItem('cgm-tracker'));
-  const dexSide = getSide(state.dexPos);
-
-  if (device === 'dex') {
-    state.dexPos  = nextInPool(DEX_POSITIONS[dexSide], state.dexPos);
-    state.dexDate = dateStr(today());
-  } else {
-    const pool = POD_POSITIONS[dexSide];
-    let newPos = nextInPool(pool, state.podPos);
-    if (newPos === state.dexPos) newPos = nextInPool(pool, newPos);
-    state.podPos  = newPos;
-    state.podDate = dateStr(today());
-  }
-
-  localStorage.setItem('cgm-tracker', JSON.stringify(state));
-
-  // Delight: briefly show confirmation on the button before re-rendering
-  const btn = document.getElementById('btn-change-' + device);
-  btn.textContent = '✓ Gespeichert';
-  btn.classList.add('confirmed');
-  btn.disabled = true;
-
-  setTimeout(() => {
-    renderTracker(state);
-  }, 900);
-}
-
-function renderTracker(state, animate) {
-  document.getElementById('setup').style.display = 'none';
-  const tracker = document.getElementById('tracker');
-  tracker.style.display = 'block';
-
-  if (animate) {
-    tracker.classList.remove('tracker-enter');
-    void tracker.offsetWidth; // reflow to restart animation
-    tracker.classList.add('tracker-enter');
-  }
-
-  const t = today();
-
-  document.getElementById('cur-dex-pos').textContent = state.dexPos;
-  document.getElementById('cur-pod-pos').textContent = state.podPos;
-
-  renderDaysCell('cur-dex-days-wrap', 'cur-dex-days', state.dexDate, DEX_INTERVAL);
-  renderDaysCell('cur-pod-days-wrap', 'cur-pod-days', state.podDate, POD_INTERVAL);
-
-  // Restore change buttons (in case they were in confirmed state)
-  const btnDex = document.getElementById('btn-change-dex');
-  const btnPod = document.getElementById('btn-change-pod');
-  btnDex.textContent = 'Jetzt gewechselt';
-  btnDex.classList.remove('confirmed');
-  btnDex.disabled = false;
-  btnPod.textContent = 'Jetzt gewechselt';
-  btnPod.classList.remove('confirmed');
-  btnPod.disabled = false;
-
-  // Build schedule for next 60 days
-  const schedule = [];
-  let curDexPos = state.dexPos;
-  let curPodPos = state.podPos;
-  let curSide   = getSide(state.dexPos);
-
-  let nextDexDate = addDays(t, daysUntilNext(new Date(state.dexDate), DEX_INTERVAL));
-  let nextPodDate = addDays(t, daysUntilNext(new Date(state.podDate), POD_INTERVAL));
-  const horizon   = addDays(t, 61);
-
-  while (nextDexDate < horizon || nextPodDate < horizon) {
-    const dexNext = nextDexDate < horizon;
-    const podNext = nextPodDate < horizon;
-    const dexTime = nextDexDate.getTime();
-    const podTime = nextPodDate.getTime();
-
-    if (dexTime === podTime && dexNext && podNext) {
-      const newSide   = oppSide(curSide);
-      const newDexPos = nextInPool(DEX_POSITIONS[newSide], DEX_POSITIONS[newSide][0]);
-      const newPodPos = POD_POSITIONS[newSide][0];
-      schedule.push({ date: new Date(nextDexDate), type: 'both', dexPos: newDexPos, podPos: newPodPos, sideSwitch: true, newSide });
-      curSide   = newSide;
-      curDexPos = newDexPos;
-      curPodPos = newPodPos;
-      nextDexDate = addDays(nextDexDate, DEX_INTERVAL);
-      nextPodDate = addDays(nextPodDate, POD_INTERVAL);
-    } else if (!podNext || (dexNext && dexTime < podTime)) {
-      const newDexPos = nextInPool(DEX_POSITIONS[curSide], curDexPos);
-      schedule.push({ date: new Date(nextDexDate), type: 'dex', dexPos: newDexPos });
-      curDexPos   = newDexPos;
-      nextDexDate = addDays(nextDexDate, DEX_INTERVAL);
-    } else {
-      const pool      = POD_POSITIONS[curSide];
-      const newPodPos = nextInPool(pool, curPodPos);
-      const candidate = newPodPos === curDexPos ? nextInPool(pool, newPodPos) : newPodPos;
-      schedule.push({ date: new Date(nextPodDate), type: 'pod', podPos: candidate });
-      curPodPos   = candidate;
-      nextPodDate = addDays(nextPodDate, POD_INTERVAL);
-    }
-  }
-
-  // Render timeline
-  const tl = document.getElementById('timeline');
-  tl.textContent = '';
-
-  schedule.slice(0, 14).forEach(ev => {
-    const isToday    = dateStr(ev.date) === dateStr(t);
-    const isTomorrow = dateStr(ev.date) === dateStr(addDays(t, 1));
-
-    const item = el('div', 'tl-item' + (ev.sideSwitch ? ' side-switch' : ''));
-
-    const dateCol = el('div', 'tl-date');
-    dateCol.appendChild(txt('span', 'day', formatDate(ev.date)));
-    if (isToday)         dateCol.appendChild(txt('span', 'today-tag', 'heute'));
-    else if (isTomorrow) dateCol.appendChild(txt('span', 'tomorrow-tag', 'morgen'));
-    item.appendChild(dateCol);
-
-    const body = el('div', 'tl-body');
-    if (ev.type === 'both') {
-      body.appendChild(txt('div', 'tl-device both', 'Dexcom + Omnipod'));
-      body.appendChild(txt('div', 'tl-pos', 'Dex: ' + ev.dexPos));
-      body.appendChild(txt('div', 'tl-pos', 'Pod: ' + ev.podPos));
-      body.appendChild(txt('div', 'tl-note', 'Seitenwechsel → ' + (ev.newSide === 'right' ? 'Rechts' : 'Links')));
-    } else if (ev.type === 'dex') {
-      body.appendChild(txt('div', 'tl-device dex', 'Dexcom G7'));
-      body.appendChild(txt('div', 'tl-pos', ev.dexPos));
-    } else {
-      body.appendChild(txt('div', 'tl-device pod', 'Omnipod 5'));
-      body.appendChild(txt('div', 'tl-pos', ev.podPos));
-    }
-    item.appendChild(body);
-
-    if (ev.sideSwitch) item.appendChild(txt('div', 'tl-switch-icon', '⇄'));
-
-    tl.appendChild(item);
-  });
-}
-
-function resetTracker() {
-  if (!confirm('Tracker zurücksetzen?')) return;
-  localStorage.removeItem('cgm-tracker');
-  document.getElementById('setup').style.display = 'block';
-  document.getElementById('tracker').style.display = 'none';
-}
-
-// Init
-(function() {
-  const t   = new Date();
-  const fmt = d => d.toISOString().split('T')[0];
-
-  // Constrain date inputs to a sensible range
-  const maxDate = fmt(t);
-  const minDate = fmt(new Date(t.getFullYear() - 1, t.getMonth(), t.getDate()));
-  ['dex-date', 'pod-date'].forEach(id => {
-    const input = document.getElementById(id);
-    input.max = maxDate;
-    input.min = minDate;
-  });
-
-  document.getElementById('pod-pos').value  = 'Rechter Bauch';
-  document.getElementById('pod-date').value = fmt(t);
-  document.getElementById('dex-pos').value  = 'Rechter Arm';
-  const dexSet = new Date(t);
-  dexSet.setDate(dexSet.getDate() + 1);
-  document.getElementById('dex-date').value = fmt(dexSet);
-
-  const saved = localStorage.getItem('cgm-tracker');
-  if (saved) {
-    try { renderTracker(JSON.parse(saved)); }
-    catch(e) { localStorage.removeItem('cgm-tracker'); }
-  }
-})();
-</script>
+  <script src="app.js"></script>
 </body>
 </html>

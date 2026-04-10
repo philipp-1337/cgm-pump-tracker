@@ -1,0 +1,39 @@
+Bereits umgesetzt
+
+Historie / Logbuch
+Jede echte Aenderung wird jetzt gespeichert, nicht nur der aktuelle State. Wechsel landen mit Zeitpunkt, alter und neuer Stelle im Verlauf.
+
+Freie Notizen pro Wechsel
+Ist umgesetzt. Pro Wechsel gibt es jetzt ein Freitextfeld fuer persoenliche Hinweise.
+
+Reminder-Logik
+Ist umgesetzt. Neben Tagen gibt es jetzt auch Hinweise wie "Heute wechseln", "Morgen faellig" oder "In X Stunden faellig".
+
+Stellen sperren / pausieren
+Ist umgesetzt. Positionen lassen sich temporaer pausieren und werden dann in der Planung uebersprungen.
+
+Heilungs- / Ruhezeit fuer Stellen
+Ist umgesetzt. Pro Position gibt es jetzt eine konfigurierbare Ruhezeit in Tagen.
+
+Symptom- oder Vertraeglichkeitsrating
+Ist umgesetzt. Wechsel koennen mit 1 bis 5 Sternen sowie Tags wie "reizfrei" oder "druckempfindlich" gespeichert werden.
+
+Export / Backup
+JSON-Export ist umgesetzt. CSV waere noch ein moeglicher naechster Schritt.
+
+Kleine Tageslogik verbessern
+Ist umgesetzt. Das Startdatum wird jetzt konsistent auf heute gesetzt und nicht mehr auf morgen vorbelegt.
+
+Noch offen
+
+Kalenderansicht
+Die Timeline ist vorhanden, aber eine echte Monatsansicht fehlt noch.
+
+Konfigurierbare Geraete
+Intervalle und Positionslisten sind aktuell noch fest fuer Dexcom G7 und Omnipod 5 hinterlegt.
+
+Moegliche naechste Schritte
+
+CSV-Export zusaetzlich zum JSON-Backup
+Monatsansicht mit Kollisionen und Mustern
+Geraete, Intervalle und Positionslisten komplett editierbar machen
