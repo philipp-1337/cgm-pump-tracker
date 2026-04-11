@@ -748,7 +748,7 @@ function renderTimeline() {
 
   groupedSchedule.slice(0, 10).forEach((group) => {
     const card = document.createElement("article");
-    card.className = `timeline-item${group.isSideSwitch ? " is-side-switch" : ""}`;
+    card.className = `timeline-item${group.isSideSwitch ? " is-side-switch" : ""}${group.hasBothDevices && !group.isSideSwitch ? " is-joint-day" : ""}`;
 
     const top = document.createElement("div");
     top.className = "timeline-top";
