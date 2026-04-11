@@ -61,7 +61,11 @@ function parseDate(value) {
 }
 
 function isoDate(value) {
-  return new Date(value).toISOString().slice(0, 10);
+  const d = new Date(value);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function isoDateTimeLocal(value) {
@@ -516,7 +520,7 @@ function findSyncOpportunity(blockedDeviceKey, blockedDueAt, simulatedCurrent, s
 
   if (diffHours < 0 || diffHours > SYNC_WINDOW_DAYS * 24) return null;
 
-  const jointAt = partnerDueAt.toISOString();
+  const jointAt = isoDateTimeLocal(partnerDueAt);
   const blockedFrom = simulatedCurrent[blockedDeviceKey].position;
   const partnerFrom = simulatedCurrent[partnerDeviceKey].position;
   const blockedEligible = getEligiblePositions(blockedDeviceKey, blockedFrom, jointAt, simulatedHistory, { jointSwitch: true });
@@ -609,7 +613,7 @@ function updateChangePositionOptions() {
   const deviceKey = document.getElementById("change-device").value;
   const select = document.getElementById("change-position");
   const currentPosition = state.current?.[deviceKey]?.position || "";
-  const referenceDate = document.getElementById("change-at").value || now().toISOString();
+  const referenceDate = document.getElementById("change-at").value || isoDateTimeLocal(now());
   const suggestion = suggestNextPosition(deviceKey, currentPosition, referenceDate);
 
   select.innerHTML = "";
@@ -727,7 +731,7 @@ function buildSchedule(horizonDays = 60) {
     if (!nextItem) break;
 
     const fromPosition = simulatedCurrent[nextItem.deviceKey].position;
-    const dueAtIso = nextItem.dueAt.toISOString();
+    const dueAtIso = isoDateTimeLocal(nextItem.dueAt);
     const eligible = getEligiblePositions(nextItem.deviceKey, fromPosition, dueAtIso, simulatedHistory);
     const suggestion = suggestNextPosition(nextItem.deviceKey, fromPosition, dueAtIso, simulatedHistory, fromPosition);
     const blockedReason = eligible.length === 0
