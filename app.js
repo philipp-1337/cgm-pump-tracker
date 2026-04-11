@@ -932,11 +932,11 @@ function buildCalendarMonths(offset) {
 
 function eventsByDay(schedule, monthDate) {
   const start = startOfMonth(monthDate);
-  const end = endOfMonth(monthDate);
+  const nextMonthStart = startOfMonth(addMonths(monthDate, 1));
   const map = new Map();
 
   schedule.forEach((item) => {
-    if (item.dueAt < start || item.dueAt > end) return;
+    if (item.dueAt < start || item.dueAt >= nextMonthStart) return;
     const key = isoDate(item.dueAt);
     if (!map.has(key)) map.set(key, { items: [] });
     map.get(key).items.push(item);
