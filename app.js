@@ -165,6 +165,108 @@ function isBellyPosition(position) {
   return normalizePositionKey(position).includes("bauch");
 }
 
+function getPositionZone(position) {
+  const key = normalizePositionKey(position);
+  if (key.includes("arm")) return "arm";
+  if (key.includes("bauch")) return "belly";
+  if (key.includes("bein")) return "leg";
+  return "generic";
+}
+
+function getPositionSideLabel(position) {
+  const key = normalizePositionKey(position);
+  if (key.includes("link")) return "L";
+  if (key.includes("recht")) return "R";
+  return "";
+}
+
+function makeSvgNode(tag, attributes = {}) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  Object.entries(attributes).forEach(([name, value]) => node.setAttribute(name, value));
+  return node;
+}
+
+function createPositionIcon(position) {
+  const zone = getPositionZone(position);
+  const svg = makeSvgNode("svg", {
+    viewBox: "0 0 24 24",
+    "aria-hidden": "true",
+    class: "position-icon-svg",
+  });
+
+  const strokeAttrs = {
+    fill: "none",
+    stroke: "currentColor",
+    "stroke-width": "1.8",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round",
+  };
+
+  if (zone === "arm") {
+    svg.appendChild(makeSvgNode("path", {
+      ...strokeAttrs,
+      d: "M9 6.5c1.3-1.8 4.6-1.8 5.8.3.7 1.1.4 2.5-.1 3.7l-1.2 2.6c-.4.9-.3 1.9.3 2.6l.6.8c.6.8.4 2-.4 2.5-.8.5-1.9.3-2.5-.5l-1.1-1.5c-.8-1.1-1-2.5-.5-3.8l1-2.5c.3-.8.4-1.7 0-2.5-.4-.8-1.4-1.1-2-.5L7.8 9.4",
+    }));
+    return svg;
+  }
+
+  if (zone === "belly") {
+    svg.appendChild(makeSvgNode("path", {
+      ...strokeAttrs,
+      d: "M8 7.5c1.2-1.3 2.5-2 4-2s2.8.7 4 2",
+    }));
+    svg.appendChild(makeSvgNode("path", {
+      ...strokeAttrs,
+      d: "M7.5 9.5c.5 4.6.9 7 4.5 7s4-2.4 4.5-7",
+    }));
+    svg.appendChild(makeSvgNode("path", {
+      ...strokeAttrs,
+      d: "M10 12h4",
+    }));
+    return svg;
+  }
+
+  if (zone === "leg") {
+    svg.appendChild(makeSvgNode("path", {
+      ...strokeAttrs,
+      d: "M10 5.5h4l-1 6.2 1.9 6.8M10.8 11.7 8.6 18.5",
+    }));
+    return svg;
+  }
+
+  svg.appendChild(makeSvgNode("circle", {
+    cx: "12",
+    cy: "12",
+    r: "4.5",
+    ...strokeAttrs,
+  }));
+  return svg;
+}
+
+function createPositionChip(position) {
+  const chip = document.createElement("span");
+  chip.className = `position-chip is-${getPositionZone(position)}`;
+  chip.setAttribute("aria-label", position);
+  chip.title = position;
+
+  const iconWrap = document.createElement("span");
+  iconWrap.className = "position-icon";
+  iconWrap.appendChild(createPositionIcon(position));
+
+  const text = document.createElement("span");
+  text.className = "position-chip-label";
+  text.textContent = position.replace(/^Rechter\s|^Rechtes\s|^Linker\s|^Linkes\s/i, "");
+
+  const side = document.createElement("span");
+  side.className = "position-side";
+  side.textContent = getPositionSideLabel(position);
+
+  chip.appendChild(iconWrap);
+  chip.appendChild(text);
+  if (side.textContent) chip.appendChild(side);
+  return chip;
+}
+
 function isAllowedDeviceCombination(dexPosition, podPosition) {
   if (!dexPosition || !podPosition) return true;
   if (getSide(dexPosition) === getSide(podPosition)) return true;
@@ -772,10 +874,45 @@ function renderTimeline() {
 
       const label = document.createElement("p");
       label.className = "timeline-meta";
-      label.textContent = `${getDevice(item.device).label}: ${item.blocked
-        ? `bleibt auf ${item.fromPosition}. ${item.blockedReason}`
-        : `von ${item.fromPosition} nach ${item.toPosition}.`}`;
+      const line = document.createElement("span");
+      line.className = "timeline-line";
 
+      const devicePill = makePill(getDevice(item.device).label, `is-${getDevice(item.device).colorClass}`);
+      line.appendChild(devicePill);
+
+      if (item.blocked) {
+        const copy = document.createElement("span");
+        copy.className = "timeline-copy";
+        copy.textContent = "bleibt auf";
+        line.appendChild(copy);
+        line.appendChild(createPositionChip(item.fromPosition));
+
+        if (item.blockedReason) {
+          const reason = document.createElement("span");
+          reason.className = "timeline-copy is-muted";
+          reason.textContent = item.blockedReason;
+          line.appendChild(reason);
+        }
+      } else {
+        const fromCopy = document.createElement("span");
+        fromCopy.className = "timeline-copy";
+        fromCopy.textContent = "von";
+        line.appendChild(fromCopy);
+        line.appendChild(createPositionChip(item.fromPosition));
+
+        const arrow = document.createElement("span");
+        arrow.className = "timeline-arrow";
+        arrow.textContent = "->";
+        line.appendChild(arrow);
+
+        line.appendChild(createPositionChip(item.toPosition));
+
+        if (item.syncPlanned) {
+          line.appendChild(makePill("Sync", "is-collision"));
+        }
+      }
+
+      label.appendChild(line);
       row.appendChild(label);
       card.appendChild(row);
     });

@@ -704,6 +704,22 @@ textarea:focus-visible {
   border-top: 1px solid rgba(23, 48, 58, 0.08);
 }
 
+.timeline-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.timeline-copy,
+.timeline-arrow {
+  color: var(--muted-strong);
+}
+
+.timeline-copy.is-muted {
+  color: var(--muted);
+}
+
 .timeline-title,
 .history-title {
   font-size: 1.04rem;
@@ -745,6 +761,71 @@ textarea:focus-visible {
 .pill.is-collision {
   background: var(--danger-soft);
   color: var(--danger);
+}
+
+.position-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 5px 8px 5px 6px;
+  border: 1px solid rgba(23, 48, 58, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.position-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(23, 48, 58, 0.06);
+}
+
+.position-icon-svg {
+  width: 16px;
+  height: 16px;
+}
+
+.position-chip-label {
+  font-size: 0.84rem;
+  line-height: 1;
+}
+
+.position-side {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(23, 48, 58, 0.08);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.position-chip.is-arm .position-icon,
+.position-chip.is-arm .position-side {
+  background: rgba(21, 114, 161, 0.12);
+  color: var(--dex);
+}
+
+.position-chip.is-belly .position-icon,
+.position-chip.is-belly .position-side {
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--accent);
+}
+
+.position-chip.is-leg .position-icon,
+.position-chip.is-leg .position-side {
+  background: rgba(204, 111, 55, 0.14);
+  color: var(--pod);
 }
 
 .tag-btn {
