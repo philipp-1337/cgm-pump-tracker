@@ -635,7 +635,23 @@ function updateChangePositionOptions() {
     select.appendChild(option);
   });
 
+  updateChangeContext(deviceKey);
   updateChangeHint(deviceKey, referenceDate);
+}
+
+function updateChangeContext(deviceKey) {
+  const copy = document.getElementById("change-context-copy");
+  if (!copy) return;
+
+  const device = getDevice(deviceKey);
+  const currentPosition = state.current?.[deviceKey]?.position;
+
+  if (!device || !currentPosition) {
+    copy.textContent = "Sobald ein aktueller Wechselstand vorhanden ist, wird die bisherige Stelle hier angezeigt.";
+    return;
+  }
+
+  copy.textContent = `${device.label} sitzt aktuell auf ${currentPosition}. Die Verträglichkeit bezieht sich auf diese bisherige Stelle, bevor du auf die neue Position wechselst.`;
 }
 
 function updateChangeHint(deviceKey, referenceDate) {

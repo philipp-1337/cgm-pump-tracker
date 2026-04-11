@@ -342,7 +342,6 @@ h4 {
 
 .stack-lg,
 .change-form,
-.change-hint,
 .history-list,
 .timeline,
 .settings-grid,
@@ -392,6 +391,7 @@ h4 {
 .history-item,
 .setting-card,
 .calendar-card,
+.change-context,
 .change-hint {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -411,12 +411,14 @@ h4 {
   padding: var(--space-5);
 }
 
+.change-context,
 .change-hint {
   padding: var(--space-4) var(--space-5);
   background: var(--surface-muted);
 }
 
-.change-hint-title {
+.change-hint-title,
+.change-context-title {
   margin-bottom: var(--space-2);
   font-family: "DM Mono", monospace;
   font-size: 0.76rem;

@@ -131,6 +131,10 @@
                 <span>Gerät</span>
                 <select id="change-device" name="change-device"></select>
               </label>
+              <div class="change-hint" id="change-hint" aria-live="polite">
+                <p class="change-hint-title">Kombinationsregel</p>
+                <p class="change-hint-copy" id="change-hint-copy"></p>
+              </div>
               <label class="field">
                 <span>Neue Position</span>
                 <select id="change-position" name="change-position"></select>
@@ -151,11 +155,12 @@
               </label>
             </div>
 
-            <div class="change-hint" id="change-hint" aria-live="polite">
-              <p class="change-hint-title">Kombinationsregel</p>
-              <p class="change-hint-copy" id="change-hint-copy"></p>
+            
+            <div class="change-context" id="change-context" aria-live="polite">
+              <p class="change-hint-title">Bisherige Stelle</p>
+              <p class="change-hint-copy" id="change-context-copy"></p>
             </div>
-
+            
             <div class="tag-group" id="tag-group">
               <button type="button" class="tag-btn" data-tag="reizfrei">reizfrei</button>
               <button type="button" class="tag-btn" data-tag="druckempfindlich">druckempfindlich</button>
