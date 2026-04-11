@@ -988,7 +988,7 @@ function renderCalendar() {
       const isToday = dayKey === isoDate(now());
 
       const cell = document.createElement("article");
-      cell.className = `calendar-day${isOutside ? " is-outside" : ""}${isToday ? " is-today" : ""}${dayGroup?.isSideSwitch ? " is-side-switch" : ""}`;
+      cell.className = `calendar-day${isOutside ? " is-outside" : ""}${isToday ? " is-today" : ""}${events.length > 1 ? " is-joint-day" : ""}`;
 
       const dayNumber = document.createElement("div");
       dayNumber.className = "calendar-day-number";
@@ -1005,12 +1005,6 @@ function renderCalendar() {
 
       if (events.length > 3) {
         eventList.appendChild(makeCalendarPill(`+${events.length - 3}`, "", `${events.length - 3} weitere Wechsel`));
-      }
-
-      if (dayGroup?.isSideSwitch) {
-        eventList.appendChild(makeCalendarPill("SW", "is-collision", "Seitenwechsel"));
-      } else if (events.length > 1) {
-        eventList.appendChild(makeCalendarPill("2x", "is-collision", "Kollision"));
       }
 
       cell.appendChild(eventList);
