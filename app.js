@@ -381,17 +381,17 @@ function reminderText(startAt, intervalDays) {
   if (diffMs < 0) {
     const overdueDays = Math.abs(diffDays);
     return {
-      label: overdueDays <= 1 ? "Heute ueberfaellig" : `${overdueDays} Tage ueberfaellig`,
+      label: overdueDays <= 1 ? "Heute überfällig" : `${overdueDays} Tage überfällig`,
       tone: "is-danger",
-      meta: `Faellig seit ${formatDateTime(dueAt)}`,
+      meta: `Fällig seit ${formatDateTime(dueAt)}`,
     };
   }
 
   if (diffHours <= 6) {
     return {
-      label: `In ${Math.max(diffHours, 1)} Stunden faellig`,
+      label: `In ${Math.max(diffHours, 1)} Stunden fällig`,
       tone: "is-danger",
-      meta: `Spaetestens ${formatDateTime(dueAt)}`,
+      meta: `Spätestens ${formatDateTime(dueAt)}`,
     };
   }
 
@@ -399,22 +399,22 @@ function reminderText(startAt, intervalDays) {
     return {
       label: "Heute wechseln",
       tone: "is-warning",
-      meta: `Faellig um ${formatDateTime(dueAt)}`,
+      meta: `Fällig um ${formatDateTime(dueAt)}`,
     };
   }
 
   if (diffDays === 1) {
     return {
-      label: "Morgen faellig",
+      label: "Morgen fällig",
       tone: "is-warning",
-      meta: `Faellig am ${formatDateTime(dueAt)}`,
+      meta: `Fällig am ${formatDateTime(dueAt)}`,
     };
   }
 
   return {
     label: `Noch ${diffDays} Tage`,
     tone: "is-ok",
-    meta: `Faellig am ${formatDateTime(dueAt)}`,
+    meta: `Fällig am ${formatDateTime(dueAt)}`,
   };
 }
 
@@ -461,7 +461,7 @@ function explainBlockedChange(deviceKey, fromPosition, targetDate, historyEntrie
   ));
 
   if (!partnerPosition) {
-    return "Keine gueltige Kombination verfuegbar.";
+    return "Keine gültige Kombination verfügbar.";
   }
 
   if (!sameSideOptions.length && !isBellyPosition(partnerPosition)) {
@@ -624,7 +624,7 @@ function updateChangePositionOptions() {
       : paused
       ? `${position} (pausiert)`
       : invalidTransition
-        ? `${position} (gerade nicht moeglich)`
+        ? `${position} (gerade nicht möglich)`
         : position;
     option.disabled = isCurrent || paused || invalidTransition;
     if (position === suggestion) option.selected = true;
@@ -648,16 +648,16 @@ function updateChangeHint(deviceKey, referenceDate) {
   );
 
   if (!partnerPosition) {
-    hint.textContent = "Die Kombinationsregel wird aktiv, sobald fuer beide Geraete eine aktuelle Position hinterlegt ist.";
+    hint.textContent = "Die Kombinationsregel wird aktiv, sobald für beide Geräte eine aktuelle Position hinterlegt ist.";
     return;
   }
 
   if (availablePositions.length === 0) {
-    hint.textContent = `${partnerLabel} steht zu diesem Zeitpunkt auf ${partnerPosition}. Gerade ist keine neue, gueltige Stelle verfuegbar.`;
+    hint.textContent = `${partnerLabel} steht zu diesem Zeitpunkt auf ${partnerPosition}. Gerade ist keine neue, gültige Stelle verfügbar.`;
     return;
   }
 
-  hint.textContent = `${partnerLabel} steht zu diesem Zeitpunkt auf ${partnerPosition}. Auswaehlbar bleiben nur neue Stellen, die zur Seitenlogik passen und deren Ruhezeit abgelaufen ist.`;
+  hint.textContent = `${partnerLabel} steht zu diesem Zeitpunkt auf ${partnerPosition}. Auswählbar bleiben nur neue Stellen, die zur Seitenlogik passen und deren Ruhezeit abgelaufen ist.`;
 }
 
 function renderStaticLabels() {
@@ -844,7 +844,7 @@ function renderTimeline() {
   wrapper.innerHTML = "";
 
   if (groupedSchedule.length === 0) {
-    wrapper.innerHTML = '<div class="empty-state">Sobald aktuelle Werte gesetzt sind, erscheinen hier die naechsten Wechsel.</div>';
+    wrapper.innerHTML = '<div class="empty-state">Sobald aktuelle Werte gesetzt sind, erscheinen hier die nächsten Wechsel.</div>';
     return;
   }
 
@@ -1073,7 +1073,7 @@ function renderSettings() {
   getDevices().forEach((device) => {
     const card = document.createElement("article");
     card.className = "setting-card";
-    card.innerHTML = `<div class="setting-top"><div><p class="section-kicker">${device.label}</p><h3>Verfuegbare Positionen</h3></div><p class="setting-note">Ruhezeit pro Stelle in Tagen.</p></div>`;
+    card.innerHTML = `<div class="setting-top"><div><p class="section-kicker">${device.label}</p><h3>Verfügbare Positionen</h3></div><p class="setting-note">Ruhezeit pro Stelle in Tagen.</p></div>`;
 
     device.positions.forEach((position) => {
       const row = document.createElement("div");
@@ -1166,7 +1166,7 @@ function handleChangeSubmit(event) {
   const currentEntry = state.current[deviceKey];
 
   if (!at || !toPosition) {
-    alert("Bitte Wechselzeit und Position auswaehlen.");
+    alert("Bitte Wechselzeit und Position auswählen.");
     return;
   }
 
@@ -1177,13 +1177,13 @@ function handleChangeSubmit(event) {
   }
 
   if (toPosition === currentEntry.position) {
-    alert("Bitte immer eine neue Stelle waehlen.");
+    alert("Bitte immer eine neue Stelle wählen.");
     return;
   }
 
   const eligible = getEligiblePositions(deviceKey, currentEntry.position, at);
   if (!eligible.includes(toPosition)) {
-    alert("Diese Stelle ist mit der aktuellen Seitenlogik oder Ruhezeit gerade nicht moeglich.");
+    alert("Diese Stelle ist mit der aktuellen Seitenlogik oder Ruhezeit gerade nicht möglich.");
     return;
   }
 
@@ -1299,7 +1299,7 @@ function escapeCsv(value) {
 }
 
 function exportCsv() {
-  const header = ["geraet", "zeitpunkt", "von", "nach", "rating", "tags", "notiz"];
+  const header = ["gerät", "zeitpunkt", "von", "nach", "rating", "tags", "notiz"];
   const rows = state.history.map((entry) => [
     getDevice(entry.device).label,
     formatDateTime(entry.at),
@@ -1321,7 +1321,7 @@ function exportCsv() {
 }
 
 function resetTracker() {
-  const confirmed = confirm("Tracker und Logbuch wirklich zuruecksetzen?");
+  const confirmed = confirm("Tracker und Logbuch wirklich zurücksetzen?");
   if (!confirmed) return;
 
   localStorage.removeItem(STORAGE_KEY);
@@ -1359,7 +1359,7 @@ function attachEvents() {
     try {
       handleConfigSubmit(event);
     } catch (error) {
-      alert("Bitte fuer beide Geraeteslots Namen und mindestens eine Position angeben.");
+      alert("Bitte für beide Geräteslots Namen und mindestens eine Position angeben.");
     }
   });
   document.getElementById("change-device").addEventListener("change", updateChangePositionOptions);

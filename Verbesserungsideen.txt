@@ -1,22 +1,22 @@
 Bereits umgesetzt
 
 Historie / Logbuch
-Jede echte Aenderung wird jetzt gespeichert, nicht nur der aktuelle State. Wechsel landen mit Zeitpunkt, alter und neuer Stelle im Verlauf.
+Jede echte Änderung wird jetzt gespeichert, nicht nur der aktuelle State. Wechsel landen mit Zeitpunkt, alter und neuer Stelle im Verlauf.
 
 Freie Notizen pro Wechsel
-Ist umgesetzt. Pro Wechsel gibt es jetzt ein Freitextfeld fuer persoenliche Hinweise.
+Ist umgesetzt. Pro Wechsel gibt es jetzt ein Freitextfeld für persönliche Hinweise.
 
 Reminder-Logik
-Ist umgesetzt. Neben Tagen gibt es jetzt auch Hinweise wie "Heute wechseln", "Morgen faellig" oder "In X Stunden faellig".
+Ist umgesetzt. Neben Tagen gibt es jetzt auch Hinweise wie "Heute wechseln", "Morgen fällig" oder "In X Stunden fällig".
 
 Stellen sperren / pausieren
-Ist umgesetzt. Positionen lassen sich temporaer pausieren und werden dann in der Planung uebersprungen.
+Ist umgesetzt. Positionen lassen sich temporär pausieren und werden dann in der Planung übersprungen.
 
-Heilungs- / Ruhezeit fuer Stellen
+Heilungs- / Ruhezeit für Stellen
 Ist umgesetzt. Pro Position gibt es jetzt eine konfigurierbare Ruhezeit in Tagen.
 
-Symptom- oder Vertraeglichkeitsrating
-Ist umgesetzt. Wechsel koennen mit 1 bis 5 Sternen sowie Tags wie "reizfrei" oder "druckempfindlich" gespeichert werden.
+Symptom- oder Verträglichkeitsrating
+Ist umgesetzt. Wechsel können mit 1 bis 5 Sternen sowie Tags wie "reizfrei" oder "druckempfindlich" gespeichert werden.
 
 Export / Backup
 JSON- und CSV-Export sind umgesetzt.
@@ -29,11 +29,11 @@ Neu umgesetzt
 Kalenderansicht
 Ist umgesetzt. Es gibt jetzt eine Monatsansicht mit Navigation und sichtbaren Kollisionen.
 
-Konfigurierbare Geraete
+Konfigurierbare Geräte
 Ist umgesetzt. Namen, Intervalle und Positionslisten lassen sich jetzt direkt in der App anpassen.
 
-Moegliche naechste Schritte
+Mögliche nächste Schritte
 
-Import fuer JSON- oder CSV-Backups
-Mehr als zwei Geraeteslots statt der festen zwei Tracker-Slots
-Auswertungen ueber Lieblingsstellen oder problematische Positionen
+Import für JSON- oder CSV-Backups
+Mehr als zwei Geräteslots statt der festen zwei Tracker-Slots
+Auswertungen über Lieblingsstellen oder problematische Positionen
