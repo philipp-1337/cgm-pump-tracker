@@ -60,6 +60,10 @@ function parseDate(value) {
   return new Date(value);
 }
 
+function isValidDate(value) {
+  return value instanceof Date && !Number.isNaN(value.getTime());
+}
+
 function isoDate(value) {
   const d = new Date(value);
   const year = d.getFullYear();
@@ -155,6 +159,46 @@ function normalizeConfig(sourceConfig) {
     };
   });
   return config;
+}
+
+function normalizeHistoryEntry(entry, config, index = 0) {
+  const device = DEVICE_KEYS.includes(entry?.device) ? entry.device : null;
+  if (!device) return null;
+
+  const at = parseImportDate(entry?.at);
+  if (!isValidDate(at)) return null;
+
+  const positions = config[device].positions;
+  const fallbackPosition = positions[0];
+  const from = positions.includes(entry?.from) ? entry.from : positions.includes(entry?.to) ? entry.to : fallbackPosition;
+  const to = positions.includes(entry?.to) ? entry.to : from;
+  const rating = Math.max(0, Math.min(5, Number(entry?.rating) || 0));
+  const note = typeof entry?.note === "string" ? entry.note.trim() : "";
+  const tags = Array.isArray(entry?.tags)
+    ? entry.tags.map((tag) => String(tag).trim()).filter(Boolean)
+    : [];
+
+  return {
+    id: typeof entry?.id === "string" && entry.id.trim()
+      ? entry.id
+      : `${device}-import-${at.getTime()}-${index}`,
+    device,
+    from,
+    to,
+    at: at.toISOString(),
+    rating,
+    note,
+    tags,
+  };
+}
+
+function normalizeHistoryEntries(historyEntries, config) {
+  if (!Array.isArray(historyEntries)) return [];
+
+  return historyEntries
+    .map((entry, index) => normalizeHistoryEntry(entry, config, index))
+    .filter(Boolean)
+    .sort((a, b) => new Date(b.at) - new Date(a.at));
 }
 
 function sortHistoryEntries(historyEntries = state.history) {
@@ -347,7 +391,7 @@ function migrateState(savedState) {
   return {
     config,
     current: normalizeCurrent(savedState.current, config),
-    history: Array.isArray(savedState.history) ? savedState.history : [],
+    history: normalizeHistoryEntries(savedState.history, config),
     sites: normalizeSites(savedState.sites, config),
     createdAt: savedState.createdAt || new Date().toISOString(),
   };
@@ -1219,6 +1263,275 @@ function parsePositions(value) {
     .filter((item, index, array) => array.indexOf(item) === index);
 }
 
+function parseImportDate(value) {
+  if (value instanceof Date) return value;
+
+  const text = String(value || "").trim();
+  if (!text) return new Date(NaN);
+
+  const isoCandidate = new Date(text);
+  if (isValidDate(isoCandidate)) return isoCandidate;
+
+  const localMatch = text.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:,\s*|\s+)?(\d{1,2}):(\d{2})$/);
+  if (localMatch) {
+    const [, day, month, year, hour, minute] = localMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+  }
+
+  const dateOnlyMatch = text.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (dateOnlyMatch) {
+    const [, day, month, year] = dateOnlyMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day), 12, 0);
+  }
+
+  return new Date(NaN);
+}
+
+function parseCsv(content) {
+  const rows = [];
+  let current = "";
+  let row = [];
+  let inQuotes = false;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const char = content[index];
+    const nextChar = content[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      row.push(current);
+      current = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && nextChar === "\n") index += 1;
+      row.push(current);
+      if (row.some((cell) => cell.trim() !== "")) rows.push(row);
+      row = [];
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current || row.length) {
+    row.push(current);
+    if (row.some((cell) => cell.trim() !== "")) rows.push(row);
+  }
+
+  return rows;
+}
+
+function mapCsvLabelToDeviceKey(label, labelMap, fallbackOrder) {
+  const normalized = String(label || "").trim();
+  if (!normalized) return null;
+  if (labelMap.has(normalized)) return labelMap.get(normalized);
+  const nextKey = fallbackOrder.shift();
+  if (!nextKey) return null;
+  labelMap.set(normalized, nextKey);
+  return nextKey;
+}
+
+function buildStateFromCsv(content) {
+  const rows = parseCsv(content);
+  if (rows.length < 2) {
+    throw new Error("CSV enthält keine importierbaren Zeilen.");
+  }
+
+  const header = rows[0].map((cell) => cell.trim().replace(/^\uFEFF/, "").toLowerCase());
+  const headerIndex = {
+    device: header.indexOf("gerät"),
+    at: header.indexOf("zeitpunkt"),
+    from: header.indexOf("von"),
+    to: header.indexOf("nach"),
+    rating: header.indexOf("rating"),
+    tags: header.indexOf("tags"),
+    note: header.indexOf("notiz"),
+  };
+
+  if (Object.values(headerIndex).some((index) => index === -1)) {
+    throw new Error("CSV-Format wird nicht unterstützt.");
+  }
+
+  const labelMap = new Map();
+  const fallbackOrder = [...DEVICE_KEYS];
+  const labelsByKey = {};
+  const positionsByKey = {
+    dex: new Set(),
+    pod: new Set(),
+  };
+
+  const history = rows.slice(1).map((cells, index) => {
+    const deviceLabel = cells[headerIndex.device];
+    const device = mapCsvLabelToDeviceKey(deviceLabel, labelMap, fallbackOrder);
+    if (!device) {
+      throw new Error("CSV enthält mehr als zwei Gerätegruppen.");
+    }
+
+    labelsByKey[device] = labelsByKey[device] || String(deviceLabel || "").trim() || getDevice(device).label;
+
+    const from = String(cells[headerIndex.from] || "").trim();
+    const to = String(cells[headerIndex.to] || "").trim();
+    if (from) positionsByKey[device].add(from);
+    if (to) positionsByKey[device].add(to);
+    const parsedAt = parseImportDate(cells[headerIndex.at]);
+    if (!isValidDate(parsedAt)) {
+      throw new Error(`CSV-Zeile ${index + 2} hat einen ungültigen Zeitpunkt.`);
+    }
+
+    return {
+      id: `${device}-csv-${index}`,
+      device,
+      from,
+      to,
+      at: parsedAt.toISOString(),
+      rating: Math.max(0, Math.min(5, Number(cells[headerIndex.rating]) || 0)),
+      tags: String(cells[headerIndex.tags] || "")
+        .split("|")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+      note: String(cells[headerIndex.note] || "").trim(),
+    };
+  });
+
+  const nextConfig = createDefaultConfig();
+  DEVICE_KEYS.forEach((deviceKey) => {
+    const positions = Array.from(positionsByKey[deviceKey]);
+    nextConfig[deviceKey] = {
+      ...nextConfig[deviceKey],
+      label: labelsByKey[deviceKey] || nextConfig[deviceKey].label,
+      positions: positions.length ? positions : nextConfig[deviceKey].positions,
+    };
+  });
+
+  const normalizedHistory = normalizeHistoryEntries(history, nextConfig);
+  const current = normalizedHistory.length ? normalizeCurrent(buildCurrentFromHistory(normalizedHistory), nextConfig) : null;
+
+  return {
+    config: nextConfig,
+    current,
+    history: normalizedHistory,
+    sites: normalizeSites(undefined, nextConfig),
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function buildConfigFromHistoryEntries(historyEntries, baseConfig = createDefaultConfig()) {
+  const nextConfig = normalizeConfig(baseConfig);
+
+  DEVICE_KEYS.forEach((deviceKey) => {
+    const positions = historyEntries
+      .filter((entry) => entry?.device === deviceKey)
+      .flatMap((entry) => [entry.from, entry.to])
+      .map((position) => String(position || "").trim())
+      .filter(Boolean)
+      .filter((position, index, array) => array.indexOf(position) === index);
+
+    if (positions.length) {
+      nextConfig[deviceKey].positions = positions;
+    }
+  });
+
+  return nextConfig;
+}
+
+function buildCurrentFromHistory(historyEntries) {
+  const current = {};
+  DEVICE_KEYS.forEach((deviceKey) => {
+    const latest = historyEntries.find((entry) => entry.device === deviceKey);
+    if (latest) {
+      current[deviceKey] = {
+        position: latest.to,
+        startAt: latest.at,
+      };
+    }
+  });
+  return Object.keys(current).length ? current : null;
+}
+
+function applyImportedState(nextState) {
+  state = migrateState(nextState);
+  syncStateWithConfig();
+  seedSetupDefaults();
+  if (state.current) {
+    resetChangeForm();
+  }
+  renderAll();
+  saveState();
+}
+
+function importJsonState(content) {
+  const parsed = JSON.parse(content);
+  const derivedConfig = Array.isArray(parsed) ? buildConfigFromHistoryEntries(parsed) : null;
+  const nextState = Array.isArray(parsed)
+    ? {
+        ...createInitialState(),
+        config: derivedConfig,
+        history: parsed,
+        current: buildCurrentFromHistory(normalizeHistoryEntries(parsed, derivedConfig)),
+      }
+    : parsed;
+
+  applyImportedState(nextState);
+}
+
+function importCsvState(content) {
+  applyImportedState(buildStateFromCsv(content));
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Datei konnte nicht gelesen werden."));
+    reader.readAsText(file);
+  });
+}
+
+async function handleImportFileChange(event) {
+  const input = event.target;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const confirmed = confirm("Import ersetzt den aktuellen Trackerstand auf diesem Gerät. Fortfahren?");
+  if (!confirmed) {
+    input.value = "";
+    return;
+  }
+
+  try {
+    const content = await readFileAsText(file);
+    const name = file.name.toLowerCase();
+
+    if (name.endsWith(".csv")) {
+      importCsvState(content);
+    } else {
+      importJsonState(content);
+    }
+
+    alert(`${file.name} wurde importiert.`);
+  } catch (error) {
+    alert(error instanceof Error ? error.message : "Import fehlgeschlagen.");
+  } finally {
+    input.value = "";
+  }
+}
+
+function triggerImport() {
+  document.getElementById("import-file").click();
+}
+
 function handleConfigSubmit(event) {
   event.preventDefault();
   const nextConfig = createDefaultConfig();
@@ -1380,6 +1693,8 @@ function attachEvents() {
   document.getElementById("change-at").addEventListener("change", updateChangePositionOptions);
   document.getElementById("tag-group").addEventListener("click", handleTagClicks);
   document.getElementById("settings-grid").addEventListener("change", handleSettingsChange);
+  document.getElementById("import-btn").addEventListener("click", triggerImport);
+  document.getElementById("import-file").addEventListener("change", handleImportFileChange);
   document.getElementById("export-json").addEventListener("click", exportState);
   document.getElementById("export-csv").addEventListener("click", exportCsv);
   document.getElementById("reset-btn").addEventListener("click", resetTracker);

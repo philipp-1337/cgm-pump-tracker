@@ -82,6 +82,7 @@
           <details class="action-menu">
             <summary class="btn btn-ghost action-menu-trigger">Aktionen</summary>
             <div class="button-row action-menu-panel">
+              <button type="button" class="btn btn-secondary" id="import-btn">Importieren</button>
               <button type="button" class="btn btn-secondary" id="export-json">JSON exportieren</button>
               <button type="button" class="btn btn-secondary" id="export-csv">CSV exportieren</button>
               <button type="button" class="btn btn-ghost" id="reset-btn">Neu einrichten</button>
@@ -273,6 +274,8 @@
       <div class="status-meta"></div>
     </article>
   </template>
+
+  <input type="file" id="import-file" accept=".json,.csv,application/json,text/csv" hidden>
 
   <script src="app.js"></script>
 </body>
