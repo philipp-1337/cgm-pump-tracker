@@ -21,6 +21,8 @@ const DEFAULT_CONFIG = {
   },
 };
 
+const SYNC_WINDOW_DAYS = 2;
+
 const selectedTags = new Set();
 let calendarMonthOffset = 0;
 
@@ -151,6 +153,60 @@ function normalizeConfig(sourceConfig) {
   return config;
 }
 
+function sortHistoryEntries(historyEntries = state.history) {
+  return historyEntries.slice().sort((a, b) => new Date(b.at) - new Date(a.at));
+}
+
+function normalizePositionKey(position) {
+  return String(position || "").trim().toLowerCase();
+}
+
+function isBellyPosition(position) {
+  return normalizePositionKey(position).includes("bauch");
+}
+
+function isAllowedDeviceCombination(dexPosition, podPosition) {
+  if (!dexPosition || !podPosition) return true;
+  if (getSide(dexPosition) === getSide(podPosition)) return true;
+  return isBellyPosition(dexPosition) && isBellyPosition(podPosition);
+}
+
+function findLatestHistoryEntry(deviceKey, predicate, historyEntries = state.history, latestAt = null) {
+  const cutoff = latestAt ? parseDate(latestAt) : null;
+  return sortHistoryEntries(historyEntries).find((entry) => (
+    entry.device === deviceKey
+    && predicate(entry)
+    && (!cutoff || parseDate(entry.at) <= cutoff)
+  )) || null;
+}
+
+function getPositionAt(deviceKey, at, historyEntries = state.history) {
+  const latest = findLatestHistoryEntry(deviceKey, () => true, historyEntries, at);
+  if (latest) return latest.to;
+  return state.current?.[deviceKey]?.position || "";
+}
+
+function getPairPositions(deviceKey, candidatePosition, at, historyEntries = state.history) {
+  const positions = {
+    dex: getPositionAt("dex", at, historyEntries),
+    pod: getPositionAt("pod", at, historyEntries),
+  };
+
+  positions[deviceKey] = candidatePosition;
+  return positions;
+}
+
+function canSwitchSides(fromPosition, toPosition, jointSwitch = false) {
+  if (!fromPosition || !toPosition) return true;
+  if (getSide(fromPosition) === getSide(toPosition)) return true;
+  if (jointSwitch) return true;
+  return isBellyPosition(fromPosition) || isBellyPosition(toPosition);
+}
+
+function hoursBetween(from, to) {
+  return Math.round((parseDate(to) - parseDate(from)) / 3600000);
+}
+
 function normalizeSites(sourceSites, config) {
   const nextSites = {};
   DEVICE_KEYS.forEach((deviceKey) => {
@@ -211,7 +267,7 @@ function syncStateWithConfig() {
 }
 
 function latestChangeFor(deviceKey, position) {
-  return state.history.find((entry) => entry.device === deviceKey && entry.to === position) || null;
+  return findLatestHistoryEntry(deviceKey, (entry) => entry.to === position) || null;
 }
 
 function reminderText(startAt, intervalDays) {
@@ -260,21 +316,61 @@ function reminderText(startAt, intervalDays) {
   };
 }
 
-function getEligiblePositions(deviceKey, excludePosition, targetDate, historyEntries = state.history) {
+function getEligiblePositions(
+  deviceKey,
+  excludePosition,
+  targetDate,
+  historyEntries = state.history,
+  options = {}
+) {
   const positions = getDevice(deviceKey).positions;
   const target = parseDate(targetDate);
+  const partnerDeviceKey = deviceKey === "dex" ? "pod" : "dex";
+  const partnerPosition = options.partnerPosition ?? getPositionAt(partnerDeviceKey, targetDate, historyEntries);
+  const jointSwitch = Boolean(options.jointSwitch);
 
   return positions.filter((position) => {
     if (position === excludePosition) return false;
     const siteState = state.sites[deviceKey][position];
     if (!siteState || siteState.paused) return false;
 
-    const latest = historyEntries.find((entry) => entry.device === deviceKey && entry.to === position) || null;
+    if (!canSwitchSides(excludePosition, position, jointSwitch)) return false;
+
+    const pairPositions = {
+      dex: deviceKey === "dex" ? position : partnerPosition,
+      pod: deviceKey === "pod" ? position : partnerPosition,
+    };
+    if (!isAllowedDeviceCombination(pairPositions.dex, pairPositions.pod)) return false;
+
+    const latest = findLatestHistoryEntry(deviceKey, (entry) => entry.to === position, historyEntries, targetDate);
     if (!latest) return true;
 
     const availableAt = addDays(parseDate(latest.at), siteState.restDays);
     return availableAt <= target;
   });
+}
+
+function explainBlockedChange(deviceKey, fromPosition, targetDate, historyEntries = state.history) {
+  const partnerDeviceKey = deviceKey === "dex" ? "pod" : "dex";
+  const partnerPosition = getPositionAt(partnerDeviceKey, targetDate, historyEntries);
+  const sameSideOptions = getDevice(deviceKey).positions.filter((position) => (
+    position !== fromPosition
+    && getSide(position) === getSide(partnerPosition)
+  ));
+
+  if (!partnerPosition) {
+    return "Keine gueltige Kombination verfuegbar.";
+  }
+
+  if (!sameSideOptions.length && !isBellyPosition(partnerPosition)) {
+    return "Kombinationsregel blockiert.";
+  }
+
+  if (!isBellyPosition(fromPosition) && !sameSideOptions.length) {
+    return "Warten auf gemeinsamen Wechsel.";
+  }
+
+  return "Erlaubte Stellen noch nicht frei.";
 }
 
 function getSide(position) {
@@ -294,7 +390,61 @@ function suggestNextPosition(deviceKey, excludePosition, referenceDate, historyE
   const preferred = oppositeSideFirst.find((position) => eligible.includes(position));
   if (preferred) return preferred;
 
-  return ordered.find((position) => position !== excludePosition && !state.sites[deviceKey][position]?.paused) || currentPosition;
+  return ordered.find((position) => (
+    position !== excludePosition
+    && !state.sites[deviceKey][position]?.paused
+    && canSwitchSides(excludePosition, position)
+    && (() => {
+      const partnerDeviceKey = deviceKey === "dex" ? "pod" : "dex";
+      const partnerPosition = getPositionAt(partnerDeviceKey, referenceDate, historyEntries);
+      const pairPositions = {
+        dex: deviceKey === "dex" ? position : partnerPosition,
+        pod: deviceKey === "pod" ? position : partnerPosition,
+      };
+      return isAllowedDeviceCombination(pairPositions.dex, pairPositions.pod);
+    })()
+  )) || currentPosition;
+}
+
+function findSyncOpportunity(blockedDeviceKey, blockedDueAt, simulatedCurrent, simulatedHistory) {
+  const partnerDeviceKey = blockedDeviceKey === "dex" ? "pod" : "dex";
+  const partnerDevice = getDevice(partnerDeviceKey);
+  const partnerDueAt = addDays(parseDate(simulatedCurrent[partnerDeviceKey].startAt), partnerDevice.intervalDays);
+  const diffHours = hoursBetween(blockedDueAt, partnerDueAt);
+
+  if (diffHours < 0 || diffHours > SYNC_WINDOW_DAYS * 24) return null;
+
+  const jointAt = partnerDueAt.toISOString();
+  const blockedFrom = simulatedCurrent[blockedDeviceKey].position;
+  const partnerFrom = simulatedCurrent[partnerDeviceKey].position;
+  const blockedEligible = getEligiblePositions(blockedDeviceKey, blockedFrom, jointAt, simulatedHistory, { jointSwitch: true });
+  const partnerEligibleBase = getEligiblePositions(partnerDeviceKey, partnerFrom, jointAt, simulatedHistory, { jointSwitch: true });
+
+  if (blockedEligible.length === 0 || partnerEligibleBase.length === 0) return null;
+
+  for (const blockedTo of blockedEligible) {
+    const partnerEligible = getEligiblePositions(partnerDeviceKey, partnerFrom, jointAt, simulatedHistory, {
+      jointSwitch: true,
+      partnerPosition: blockedTo,
+    });
+    const partnerTo = partnerEligible.find((candidate) => isAllowedDeviceCombination(
+      blockedDeviceKey === "dex" ? blockedTo : candidate,
+      blockedDeviceKey === "pod" ? blockedTo : candidate
+    ));
+
+    if (!partnerTo) continue;
+
+    return {
+      at: jointAt,
+      partnerDeviceKey,
+      blockedFrom,
+      partnerFrom,
+      blockedTo,
+      partnerTo,
+    };
+  }
+
+  return null;
 }
 
 function makeHistoryEntry(deviceKey, fromPosition, toPosition, at, rating, note, tags) {
@@ -364,12 +514,48 @@ function updateChangePositionOptions() {
   getDevice(deviceKey).positions.forEach((position) => {
     const option = document.createElement("option");
     const paused = state.sites[deviceKey][position]?.paused;
+    const isCurrent = position === currentPosition;
+    const invalidTransition = !getEligiblePositions(deviceKey, currentPosition, referenceDate).includes(position);
     option.value = position;
-    option.textContent = paused ? `${position} (pausiert)` : position;
-    option.disabled = paused;
+    option.textContent = isCurrent
+      ? `${position} (aktuell)`
+      : paused
+      ? `${position} (pausiert)`
+      : invalidTransition
+        ? `${position} (gerade nicht moeglich)`
+        : position;
+    option.disabled = isCurrent || paused || invalidTransition;
     if (position === suggestion) option.selected = true;
     select.appendChild(option);
   });
+
+  updateChangeHint(deviceKey, referenceDate);
+}
+
+function updateChangeHint(deviceKey, referenceDate) {
+  const hint = document.getElementById("change-hint-copy");
+  if (!hint) return;
+
+  const partnerDeviceKey = deviceKey === "dex" ? "pod" : "dex";
+  const partnerLabel = getDevice(partnerDeviceKey).label;
+  const partnerPosition = getPositionAt(partnerDeviceKey, referenceDate);
+  const availablePositions = getEligiblePositions(
+    deviceKey,
+    state.current?.[deviceKey]?.position || "",
+    referenceDate
+  );
+
+  if (!partnerPosition) {
+    hint.textContent = "Die Kombinationsregel wird aktiv, sobald fuer beide Geraete eine aktuelle Position hinterlegt ist.";
+    return;
+  }
+
+  if (availablePositions.length === 0) {
+    hint.textContent = `${partnerLabel} steht zu diesem Zeitpunkt auf ${partnerPosition}. Gerade ist keine neue, gueltige Stelle verfuegbar.`;
+    return;
+  }
+
+  hint.textContent = `${partnerLabel} steht zu diesem Zeitpunkt auf ${partnerPosition}. Auswaehlbar bleiben nur neue Stellen, die zur Seitenlogik passen und deren Ruhezeit abgelaufen ist.`;
 }
 
 function renderStaticLabels() {
@@ -410,7 +596,7 @@ function renderStatus() {
     reminderNode.textContent = reminder.label;
     reminderNode.classList.add(reminder.tone);
 
-    const latest = state.history.find((entry) => entry.device === device.key);
+    const latest = findLatestHistoryEntry(device.key, () => true);
     const tags = latest?.tags?.length ? ` · ${latest.tags.join(", ")}` : "";
     template.querySelector(".status-meta").textContent = `Seit ${formatDate(currentEntry.startAt)} · ${reminder.meta}${tags}`;
 
@@ -422,36 +608,83 @@ function buildSchedule(horizonDays = 60) {
   if (!state.current) return [];
 
   const items = [];
-  const simulatedHistory = [...state.history];
+  const simulatedHistory = sortHistoryEntries(state.history);
+  const simulatedCurrent = JSON.parse(JSON.stringify(state.current));
+  const counts = Object.fromEntries(DEVICE_KEYS.map((deviceKey) => [deviceKey, 0]));
   const horizon = addDays(startOfToday(), horizonDays);
 
-  getDevices().forEach((device) => {
-    let startAt = parseDate(state.current[device.key].startAt);
-    let fromPosition = state.current[device.key].position;
+  while (true) {
+    const nextItem = getDevices().reduce((best, device) => {
+      if (counts[device.key] >= 14) return best;
+      const dueAt = addDays(parseDate(simulatedCurrent[device.key].startAt), device.intervalDays);
+      if (dueAt > horizon) return best;
+      if (!best || dueAt < best.dueAt) return { deviceKey: device.key, dueAt };
+      return best;
+    }, null);
 
-    for (let i = 0; i < 14; i += 1) {
-      const dueAt = addDays(startAt, device.intervalDays);
-      if (dueAt > horizon) break;
+    if (!nextItem) break;
 
-      const eligible = getEligiblePositions(device.key, fromPosition, dueAt.toISOString(), simulatedHistory);
-      const suggestion = suggestNextPosition(device.key, fromPosition, dueAt.toISOString(), simulatedHistory, fromPosition);
+    const fromPosition = simulatedCurrent[nextItem.deviceKey].position;
+    const dueAtIso = nextItem.dueAt.toISOString();
+    const eligible = getEligiblePositions(nextItem.deviceKey, fromPosition, dueAtIso, simulatedHistory);
+    const suggestion = suggestNextPosition(nextItem.deviceKey, fromPosition, dueAtIso, simulatedHistory, fromPosition);
+    const blockedReason = eligible.length === 0
+      ? explainBlockedChange(nextItem.deviceKey, fromPosition, dueAtIso, simulatedHistory)
+      : "";
 
-      items.push({
-        id: `${device.key}-${i}-${dueAt.toISOString()}`,
-        device: device.key,
-        dueAt,
-        fromPosition,
-        toPosition: suggestion,
-        blocked: eligible.length === 0,
-      });
+    if (eligible.length === 0) {
+      const syncOpportunity = findSyncOpportunity(nextItem.deviceKey, nextItem.dueAt, simulatedCurrent, simulatedHistory);
+      if (syncOpportunity) {
+        items.push({
+          id: `${nextItem.deviceKey}-${counts[nextItem.deviceKey]}-${syncOpportunity.at}`,
+          device: nextItem.deviceKey,
+          dueAt: parseDate(syncOpportunity.at),
+          fromPosition: syncOpportunity.blockedFrom,
+          toPosition: syncOpportunity.blockedTo,
+          blocked: false,
+          syncPlanned: true,
+        });
 
-      simulatedHistory.unshift(
-        makeHistoryEntry(device.key, fromPosition, suggestion, dueAt.toISOString(), 0, "Geplanter Wechsel", [])
-      );
-      startAt = dueAt;
-      fromPosition = suggestion;
+        items.push({
+          id: `${syncOpportunity.partnerDeviceKey}-${counts[syncOpportunity.partnerDeviceKey]}-${syncOpportunity.at}`,
+          device: syncOpportunity.partnerDeviceKey,
+          dueAt: parseDate(syncOpportunity.at),
+          fromPosition: syncOpportunity.partnerFrom,
+          toPosition: syncOpportunity.partnerTo,
+          blocked: false,
+          syncPlanned: true,
+        });
+
+        simulatedHistory.unshift(
+          makeHistoryEntry(nextItem.deviceKey, syncOpportunity.blockedFrom, syncOpportunity.blockedTo, syncOpportunity.at, 0, "Geplanter Synchronwechsel", [])
+        );
+        simulatedHistory.unshift(
+          makeHistoryEntry(syncOpportunity.partnerDeviceKey, syncOpportunity.partnerFrom, syncOpportunity.partnerTo, syncOpportunity.at, 0, "Geplanter Synchronwechsel", [])
+        );
+        simulatedCurrent[nextItem.deviceKey] = { position: syncOpportunity.blockedTo, startAt: syncOpportunity.at };
+        simulatedCurrent[syncOpportunity.partnerDeviceKey] = { position: syncOpportunity.partnerTo, startAt: syncOpportunity.at };
+        counts[nextItem.deviceKey] += 1;
+        counts[syncOpportunity.partnerDeviceKey] += 1;
+        continue;
+      }
     }
-  });
+
+    items.push({
+      id: `${nextItem.deviceKey}-${counts[nextItem.deviceKey]}-${dueAtIso}`,
+      device: nextItem.deviceKey,
+      dueAt: nextItem.dueAt,
+      fromPosition,
+      toPosition: suggestion,
+      blocked: eligible.length === 0,
+      blockedReason,
+    });
+
+    simulatedHistory.unshift(
+      makeHistoryEntry(nextItem.deviceKey, fromPosition, suggestion, dueAtIso, 0, "Geplanter Wechsel", [])
+    );
+    simulatedCurrent[nextItem.deviceKey] = { position: suggestion, startAt: dueAtIso };
+    counts[nextItem.deviceKey] += 1;
+  }
 
   return items.sort((a, b) => a.dueAt - b.dueAt);
 }
@@ -474,10 +707,12 @@ function groupScheduleByDay(schedule) {
     const sidesFrom = new Set(group.items.map((item) => getSide(item.fromPosition)));
     const sidesTo = new Set(group.items.map((item) => getSide(item.toPosition)));
     const hasBothDevices = new Set(group.items.map((item) => item.device)).size > 1;
+    const timestamps = new Set(group.items.map((item) => parseDate(item.dueAt).getTime()));
     const fromSide = sidesFrom.size === 1 ? [...sidesFrom][0] : null;
     const toSide = sidesTo.size === 1 ? [...sidesTo][0] : null;
 
     group.hasBothDevices = hasBothDevices;
+    group.isSharedMoment = timestamps.size === 1;
     group.isSideSwitch = Boolean(hasBothDevices && fromSide && toSide && fromSide !== toSide);
     group.fromSide = fromSide;
     group.toSide = toSide;
@@ -519,7 +754,7 @@ function renderTimeline() {
     top.className = "timeline-top";
 
     const title = document.createElement("div");
-    title.innerHTML = `<p class="section-kicker">${group.hasBothDevices ? "Gemeinsamer Wechseltag" : getDevice(group.items[0].device).label}</p><div class="timeline-title">${formatDateTime(group.date)}</div>`;
+    title.innerHTML = `<p class="section-kicker">${group.hasBothDevices ? (group.isSharedMoment ? "Gemeinsamer Wechsel" : "Wechsel am selben Tag") : getDevice(group.items[0].device).label}</p><div class="timeline-title">${formatDateTime(group.date)}</div>`;
 
     const tagWrap = document.createElement("div");
     tagWrap.className = "timeline-tags";
@@ -538,7 +773,7 @@ function renderTimeline() {
       const label = document.createElement("p");
       label.className = "timeline-meta";
       label.textContent = `${getDevice(item.device).label}: ${item.blocked
-        ? `von ${item.fromPosition}. Alle anderen Positionen sind pausiert oder noch in Ruhezeit.`
+        ? `bleibt auf ${item.fromPosition}. ${item.blockedReason}`
         : `von ${item.fromPosition} nach ${item.toPosition}.`}`;
 
       row.appendChild(label);
@@ -804,15 +1039,21 @@ function handleChangeSubmit(event) {
     return;
   }
 
+  if (toPosition === currentEntry.position) {
+    alert("Bitte immer eine neue Stelle waehlen.");
+    return;
+  }
+
   const eligible = getEligiblePositions(deviceKey, currentEntry.position, at);
-  if (!eligible.includes(toPosition) && toPosition !== currentEntry.position) {
-    const proceed = confirm("Die Ruhezeit fuer diese Position ist noch nicht abgelaufen. Trotzdem speichern?");
-    if (!proceed) return;
+  if (!eligible.includes(toPosition)) {
+    alert("Diese Stelle ist mit der aktuellen Seitenlogik oder Ruhezeit gerade nicht moeglich.");
+    return;
   }
 
   const entry = makeHistoryEntry(deviceKey, currentEntry.position, toPosition, at, rating, note, Array.from(selectedTags));
   state.current[deviceKey] = { position: toPosition, startAt: at };
   state.history.unshift(entry);
+  state.history = sortHistoryEntries(state.history);
   saveState();
 
   resetChangeForm();

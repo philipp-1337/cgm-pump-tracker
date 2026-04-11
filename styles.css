@@ -341,6 +341,7 @@ h4 {
 
 .stack-lg,
 .change-form,
+.change-hint,
 .history-list,
 .timeline,
 .settings-grid,
@@ -389,7 +390,8 @@ h4 {
 .timeline-item,
 .history-item,
 .setting-card,
-.calendar-card {
+.calendar-card,
+.change-hint {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface-strong);
@@ -406,6 +408,27 @@ h4 {
 .timeline-item,
 .history-item {
   padding: var(--space-5);
+}
+
+.change-hint {
+  padding: var(--space-4) var(--space-5);
+  background:
+    linear-gradient(135deg, rgba(72, 123, 255, 0.08), rgba(255, 255, 255, 0.96)),
+    var(--surface-strong);
+}
+
+.change-hint-title {
+  margin-bottom: var(--space-2);
+  font-family: "DM Mono", monospace;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.change-hint-copy {
+  color: var(--muted);
+  line-height: 1.6;
 }
 
 .status-card {
