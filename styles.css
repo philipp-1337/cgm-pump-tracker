@@ -29,6 +29,15 @@
   --radius-lg: 28px;
   --radius-md: 20px;
   --radius-sm: 14px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 40px;
 }
 
 * {
@@ -78,7 +87,7 @@ select {
 .page-shell {
   width: min(1120px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 28px 0 80px;
+  padding: var(--space-7) 0 calc(var(--space-9) * 2);
 }
 
 .hero,
@@ -92,10 +101,10 @@ select {
 
 .hero {
   display: grid;
-  gap: 28px;
+  gap: var(--space-7);
   grid-template-columns: minmax(0, 1.25fr) auto;
-  padding: 40px;
-  margin-bottom: 28px;
+  padding: var(--space-9);
+  margin-bottom: var(--space-7);
   overflow: clip;
 }
 
@@ -135,7 +144,7 @@ select {
 
 .eyebrow,
 .section-kicker {
-  margin: 0 0 10px;
+  margin: 0 0 var(--space-2);
   color: var(--muted-strong);
   font-family: "DM Mono", monospace;
   font-size: 0.72rem;
@@ -197,7 +206,7 @@ h4 {
 
 .hero-text {
   max-width: 52ch;
-  margin-top: 16px;
+  margin-top: var(--space-4);
   font-size: 1.05rem;
 }
 
@@ -205,9 +214,9 @@ h4 {
   align-self: start;
   display: inline-flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
   min-width: 196px;
-  padding: 18px 20px;
+  padding: var(--space-5) var(--space-5);
   border: 1px solid rgba(23, 48, 58, 0.14);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.82);
@@ -240,11 +249,11 @@ h4 {
 
 .layout {
   display: grid;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .panel {
-  padding: 32px;
+  padding: var(--space-8);
   animation: panel-in 420ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -271,11 +280,11 @@ h4 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .panel-head {
-  margin-bottom: 28px;
+  margin-bottom: var(--space-7);
 }
 
 .panel-head h2,
@@ -306,14 +315,28 @@ h4 {
 }
 
 .action-menu-trigger {
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 120px;
 }
 
 .action-menu-panel {
-  display: flex;
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  z-index: 5;
+  display: none;
+  min-width: 220px;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-sm);
+}
+
+.action-menu[open] .action-menu-panel {
+  display: grid;
 }
 
 .stack-lg,
@@ -323,11 +346,11 @@ h4 {
 .settings-grid,
 .subsection {
   display: grid;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 .subsection {
-  padding-top: 30px;
+  padding-top: var(--space-8);
   border-top: 1px solid rgba(23, 48, 58, 0.1);
 }
 
@@ -343,7 +366,7 @@ h4 {
 .status-grid,
 .calendar-wrap {
   display: grid;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .device-grid,
@@ -377,22 +400,22 @@ h4 {
 .status-card,
 .setting-card,
 .calendar-card {
-  padding: 20px;
+  padding: var(--space-5);
 }
 
 .timeline-item,
 .history-item {
-  padding: 18px 20px;
+  padding: var(--space-5);
 }
 
 .status-card {
   display: grid;
-  gap: 14px;
+  gap: var(--space-4);
   align-content: start;
   position: relative;
   overflow: clip;
   min-height: 196px;
-  padding: 22px;
+  padding: var(--space-6);
 }
 
 .status-card::before {
@@ -445,7 +468,7 @@ h4 {
   align-items: center;
   width: fit-content;
   min-height: 44px;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-radius: 16px;
   font-size: clamp(1.15rem, 2.4vw, 1.55rem);
   font-weight: 700;
@@ -470,8 +493,8 @@ h4 {
 
 .device-card {
   display: grid;
-  gap: 14px;
-  padding: 22px;
+  gap: var(--space-4);
+  padding: var(--space-6);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 248, 245, 0.96));
 }
@@ -502,7 +525,7 @@ h4 {
 
 .field {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .field span {
@@ -566,7 +589,7 @@ textarea:focus {
 
 .btn {
   border: 1px solid transparent;
-  padding: 11px 16px;
+  padding: 11px var(--space-4);
   font-size: 0.94rem;
   font-weight: 500;
 }
@@ -627,7 +650,7 @@ textarea:focus-visible {
 
 .timeline-item {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 246, 0.98));
 }
@@ -645,7 +668,7 @@ textarea:focus-visible {
 }
 
 .timeline-entry {
-  padding-top: 12px;
+  padding-top: var(--space-3);
   border-top: 1px solid rgba(23, 48, 58, 0.08);
 }
 
@@ -661,12 +684,12 @@ textarea:focus-visible {
 .tag-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .pill,
 .tag-btn {
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   font-size: 0.74rem;
   letter-spacing: 0.02em;
 }
@@ -706,7 +729,7 @@ textarea:focus-visible {
 
 .setting-card {
   display: grid;
-  gap: 14px;
+  gap: var(--space-4);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 246, 0.98));
 }
@@ -714,9 +737,9 @@ textarea:focus-visible {
 .toggle-row {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr);
-  gap: 10px;
+  gap: var(--space-3);
   align-items: center;
-  padding: 12px 0;
+  padding: var(--space-3) 0;
   border-top: 1px solid rgba(23, 48, 58, 0.08);
 }
 
@@ -728,9 +751,9 @@ textarea:focus-visible {
 .toggle {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-3);
   min-height: 44px;
-  padding: 10px 12px;
+  padding: 10px var(--space-3);
   border: 1px solid rgba(23, 48, 58, 0.1);
   border-radius: var(--radius-sm);
   background: var(--surface-muted);
@@ -750,7 +773,7 @@ textarea:focus-visible {
 
 .history-item {
   display: grid;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .rating {
@@ -762,21 +785,21 @@ textarea:focus-visible {
 
 .calendar-card {
   display: grid;
-  gap: 14px;
+  gap: var(--space-4);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 246, 0.98));
 }
 
 .calendar-head {
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .calendar-weekdays,
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .calendar-weekdays div {
@@ -788,13 +811,13 @@ textarea:focus-visible {
 
 .calendar-day {
   min-height: 108px;
-  padding: 10px;
+  padding: var(--space-3);
   border: 1px solid var(--line-soft);
   border-radius: 16px;
   background: var(--surface-muted);
   display: grid;
   align-content: start;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .calendar-day.is-outside {
@@ -816,7 +839,7 @@ textarea:focus-visible {
 
 .calendar-events {
   display: grid;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .calendar-pill {
@@ -827,7 +850,7 @@ textarea:focus-visible {
 }
 
 .empty-state {
-  padding: 20px;
+  padding: var(--space-5);
   border: 1px dashed rgba(23, 48, 58, 0.18);
   border-radius: 18px;
   background: rgba(247, 248, 245, 0.9);
@@ -852,7 +875,7 @@ textarea:focus-visible {
 @media (max-width: 860px) {
   .page-shell {
     width: min(100% - 24px, 1120px);
-    padding-top: 16px;
+    padding-top: var(--space-4);
   }
 
   .hero,
@@ -865,11 +888,11 @@ textarea:focus-visible {
 
   .hero,
   .panel {
-    padding: 22px;
+    padding: var(--space-6);
   }
 
   .hero {
-    gap: 18px;
+    gap: var(--space-4);
   }
 
   .panel-head,
@@ -901,17 +924,9 @@ textarea:focus-visible {
   }
 
   .action-menu-panel {
-    display: none;
+    position: static;
     margin-top: 10px;
-    padding: 10px;
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .action-menu[open] .action-menu-panel {
-    display: grid;
+    min-width: 0;
   }
 
   .calendar-nav {
@@ -919,7 +934,7 @@ textarea:focus-visible {
     flex-direction: row;
     align-items: stretch;
     justify-content: space-between;
-    gap: 10px;
+    gap: var(--space-3);
   }
 
   .calendar-nav .btn {
@@ -936,7 +951,7 @@ textarea:focus-visible {
 
   .page-shell {
     width: calc(100% - 20px);
-    padding-bottom: 40px;
+    padding-bottom: var(--space-9);
   }
 
   .hero,
@@ -964,17 +979,17 @@ textarea:focus-visible {
 
   .status-card {
     min-height: 176px;
-    padding: 18px;
+    padding: var(--space-5);
   }
 
   .calendar-weekdays,
   .calendar-grid {
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .calendar-card {
-    gap: 10px;
-    padding: 14px;
+    gap: var(--space-3);
+    padding: var(--space-4);
   }
 
   .calendar-head .panel-note {
@@ -989,7 +1004,7 @@ textarea:focus-visible {
   .calendar-day {
     min-height: 74px;
     padding: 6px;
-    gap: 5px;
+    gap: var(--space-1);
     border-radius: 12px;
   }
 
@@ -998,7 +1013,7 @@ textarea:focus-visible {
   }
 
   .calendar-events {
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .calendar-pill {
