@@ -127,23 +127,60 @@
           </div>
 
           <form id="change-form" class="change-form">
-            <div class="form-columns">
+            <div class="change-mode-toggle" role="tablist" aria-label="Ansicht für Wechsel dokumentieren">
+              <button type="button" class="btn btn-ghost" id="change-mode-form" data-change-view="form" aria-pressed="false">Dropdown</button>
+              <button type="button" class="btn btn-secondary is-active" id="change-mode-map" data-change-view="map" aria-pressed="true">Körperansicht</button>
+            </div>
+
+            <div class="form-columns form-columns--change-meta">
               <label class="field">
                 <span>Gerät</span>
                 <select id="change-device" name="change-device"></select>
-              </label>
-              <div class="change-hint" id="change-hint" aria-live="polite">
-                <p class="change-hint-title">Kombinationsregel</p>
-                <p class="change-hint-copy" id="change-hint-copy"></p>
-              </div>
-              <label class="field">
-                <span>Neue Position</span>
-                <select id="change-position" name="change-position"></select>
               </label>
               <label class="field">
                 <span>Wechselzeit</span>
                 <input type="datetime-local" id="change-at" name="change-at">
               </label>
+              <div class="change-hint" id="change-hint" aria-live="polite">
+                <p class="change-hint-title">Kombinationsregel</p>
+                <p class="change-hint-copy" id="change-hint-copy"></p>
+              </div>
+            </div>
+
+            <div class="change-entry-view" id="change-form-view">
+              <div class="form-columns form-columns--change-detail">
+                <label class="field">
+                  <span>Neue Position</span>
+                  <select id="change-position" name="change-position"></select>
+                </label>
+              </div>
+            </div>
+
+            <div class="change-entry-view" id="change-map-view" hidden>
+              <div class="body-map-panel">
+                <div class="body-map-shell">
+                  <div class="body-map-stage">
+                    <div class="body-map-canvas" id="body-map-canvas"></div>
+                    <p class="body-map-instruction" id="body-map-instruction"></p>
+                  </div>
+                  <div class="body-map-sidebar">
+                    <div class="body-map-selection" id="body-map-selection" aria-live="polite"></div>
+                    <div class="body-map-legend" id="body-map-legend"></div>
+                    <div class="body-map-fallback" id="body-map-fallback" hidden>
+                      <p class="change-hint-title">Weitere Stellen</p>
+                      <div class="tag-group body-map-fallback-list" id="body-map-fallback-list"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="change-context" id="change-context" aria-live="polite">
+              <p class="change-hint-title">Bisherige Stelle</p>
+              <p class="change-hint-copy" id="change-context-copy"></p>
+            </div>
+
+            <div class="form-columns form-columns--change-detail">
               <label class="field">
                 <span>Verträglichkeit</span>
                 <select id="change-rating" name="change-rating">
@@ -154,12 +191,6 @@
                   <option value="1">1 - schlecht</option>
                 </select>
               </label>
-            </div>
-
-            
-            <div class="change-context" id="change-context" aria-live="polite">
-              <p class="change-hint-title">Bisherige Stelle</p>
-              <p class="change-hint-copy" id="change-context-copy"></p>
             </div>
             
             <div class="tag-group" id="tag-group">

@@ -421,6 +421,52 @@
     };
   }
 
+  function recordChange(deviceKey, toPosition, at, rating, note, tags = []) {
+    if (!store.state.current?.[deviceKey]) {
+      throw new Error("Für dieses Gerät gibt es noch keinen aktuellen Stand.");
+    }
+
+    if (!at || !toPosition) {
+      throw new Error("Bitte Wechselzeit und Position auswählen.");
+    }
+
+    const currentEntry = store.state.current[deviceKey];
+    const siteState = store.state.sites[deviceKey]?.[toPosition];
+    if (!siteState) {
+      throw new Error("Diese Position ist nicht konfiguriert.");
+    }
+
+    if (siteState.paused) {
+      throw new Error("Diese Position ist aktuell pausiert.");
+    }
+
+    if (toPosition === currentEntry.position) {
+      throw new Error("Bitte immer eine neue Stelle wählen.");
+    }
+
+    const eligible = getEligiblePositions(deviceKey, currentEntry.position, at);
+    if (!eligible.includes(toPosition)) {
+      throw new Error("Diese Stelle ist mit der aktuellen Seitenlogik oder Ruhezeit gerade nicht möglich.");
+    }
+
+    const entry = makeHistoryEntry(
+      deviceKey,
+      currentEntry.position,
+      toPosition,
+      at,
+      rating,
+      note,
+      Array.from(tags)
+    );
+
+    store.state.current[deviceKey] = { position: toPosition, startAt: at };
+    store.state.history.unshift(entry);
+    store.state.history = sortHistoryEntries(store.state.history);
+    saveState();
+
+    return entry;
+  }
+
   function buildSchedule(horizonDays = 60) {
     if (!store.state.current) return [];
 
@@ -687,6 +733,7 @@
     makeHistoryEntry,
     migrateState,
     normalizeHistoryEntries,
+    recordChange,
     reminderText,
     resetState,
     saveState,
