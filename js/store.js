@@ -176,6 +176,7 @@
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(store.state));
+    window.CgmTrackerSync?.push(store.state);
   }
 
   function setState(nextState) {
