@@ -11,6 +11,25 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div id="auth-screen" class="auth-screen" hidden>
+    <div class="auth-card">
+      <p class="eyebrow">CGM & Pod Tracker</p>
+      <h1 class="auth-title">Anmelden</h1>
+      <form id="login-form" class="stack-lg">
+        <label class="field">
+          <span>E-Mail</span>
+          <input type="email" id="login-email" name="login-email" autocomplete="email" required>
+        </label>
+        <label class="field">
+          <span>Passwort</span>
+          <input type="password" id="login-password" name="login-password" autocomplete="current-password" required>
+        </label>
+        <p id="login-error" class="login-error" hidden></p>
+        <button type="submit" class="btn btn-primary" id="login-submit">Anmelden</button>
+      </form>
+    </div>
+  </div>
+
   <div class="page-shell">
     <header class="hero">
       <div class="hero-copy">
@@ -18,9 +37,9 @@
         <h1>Wann muss ich was wechseln?</h1>
         <p class="hero-text">Der Tracker zeigt den aktuellen Status, plant die nächsten Wechsel und hält echte Erfahrungen pro Stelle fest.</p>
       </div>
-      <div class="hero-badge">
-        <span>Privat</span>
-        <strong>bleibt auf diesem Gerät</strong>
+      <div class="hero-badge" id="sync-badge">
+        <span id="sync-status">–</span>
+        <strong id="sync-user">–</strong>
       </div>
     </header>
 
@@ -86,6 +105,7 @@
               <button type="button" class="btn btn-secondary" id="export-json">JSON exportieren</button>
               <button type="button" class="btn btn-secondary" id="export-csv">CSV exportieren</button>
               <button type="button" class="btn btn-ghost" id="reset-btn">Neu einrichten</button>
+              <button type="button" class="btn btn-ghost" id="logout-btn">Abmelden</button>
             </div>
           </details>
         </div>
@@ -308,6 +328,12 @@
 
   <input type="file" id="import-file" accept=".json,.csv,application/json,text/csv" hidden>
 
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/sync.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/store.js"></script>
   <script src="js/ui.js"></script>
