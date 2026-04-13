@@ -1154,8 +1154,8 @@
     localStorage.removeItem(store.STORAGE_KEY);
     localStorage.removeItem(store.LEGACY_STORAGE_KEY);
     store.resetState();
-    seedSetupDefaults();
-    renderAll();
+    store.saveState();
+    window.CgmTrackerAuth.signOut();
   }
 
   function seedSetupDefaults() {
@@ -1189,6 +1189,72 @@
   function shiftCalendar(amount) {
     calendarMonthOffset += amount;
     renderCalendar();
+  }
+
+  function showAuthScreen() {
+    document.getElementById("auth-screen").hidden = false;
+    document.getElementById("login-email").focus();
+  }
+
+  function hideAuthScreen() {
+    document.getElementById("auth-screen").hidden = true;
+  }
+
+  function setSyncStatus(status) {
+    const el = document.getElementById("sync-status");
+    if (!el) return;
+    const labels = { syncing: "Syncing…", synced: "Synced ✓", offline: "Offline ⚠", idle: "–" };
+    el.textContent = labels[status] ?? "–";
+  }
+
+  function setSyncUser(email) {
+    const el = document.getElementById("sync-user");
+    if (!el) return;
+    el.textContent = email ?? "–";
+  }
+
+  async function handleLoginSubmit(event) {
+    event.preventDefault();
+    const email = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
+    const errorEl = document.getElementById("login-error");
+    const submitBtn = document.getElementById("login-submit");
+
+    errorEl.hidden = true;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Anmelden…";
+
+    try {
+      await window.CgmTrackerAuth.signIn(email, password);
+    } catch (error) {
+      const messages = {
+        "auth/invalid-credential": "E-Mail oder Passwort falsch.",
+        "auth/user-not-found": "Kein Konto mit dieser E-Mail.",
+        "auth/wrong-password": "Passwort falsch.",
+        "auth/too-many-requests": "Zu viele Versuche. Bitte später erneut versuchen.",
+        "auth/network-request-failed": "Keine Verbindung. Bitte Netzwerk prüfen.",
+      };
+      errorEl.textContent = messages[error.code] ?? "Anmeldung fehlgeschlagen.";
+      errorEl.hidden = false;
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Anmelden";
+    }
+  }
+
+  async function loadStateAfterLogin(uid) {
+    window.CgmTrackerSync.setUid(uid);
+    window.CgmTrackerSync.onStatusChange(setSyncStatus);
+
+    const remote = await window.CgmTrackerSync.pull();
+    const localUpdatedAt = store.state.updatedAt ?? store.state.createdAt ?? "";
+    const remoteUpdatedAt = remote?.updatedAt ?? "";
+
+    if (remote && remoteUpdatedAt > localUpdatedAt) {
+      store.setState(remote);
+      store.syncStateWithConfig();
+      localStorage.setItem(store.STORAGE_KEY, JSON.stringify(store.state));
+    }
   }
 
   function attachEvents() {
@@ -1228,24 +1294,44 @@
       if (window.innerWidth <= 860) menu.removeAttribute("open");
     });
     window.addEventListener("resize", renderCalendar);
+    document.getElementById("login-form").addEventListener("submit", handleLoginSubmit);
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      window.CgmTrackerAuth.signOut();
+    });
   }
 
-  function initApp() {
-    store.syncStateWithConfig();
-    populateStaticSelects();
-    populateChangeDeviceSelect();
-    renderStaticLabels();
-    renderConfigForm();
-    seedSetupDefaults();
-    bootstrapHistoryFromCurrent();
+  async function initApp() {
     attachEvents();
 
-    if (store.state.current) {
-      primeChangeForm();
-    }
+    window.CgmTrackerAuth.onStateChange(async (user) => {
+      if (!user) {
+        setSyncUser(null);
+        setSyncStatus("idle");
+        showAuthScreen();
+        return;
+      }
 
-    renderAll();
-    store.saveState();
+      hideAuthScreen();
+      setSyncUser(user.email);
+      setSyncStatus("syncing");
+
+      await loadStateAfterLogin(user.uid);
+
+      store.syncStateWithConfig();
+      populateStaticSelects();
+      populateChangeDeviceSelect();
+      renderStaticLabels();
+      renderConfigForm();
+      seedSetupDefaults();
+      bootstrapHistoryFromCurrent();
+
+      if (store.state.current) {
+        primeChangeForm();
+      }
+
+      renderAll();
+      store.saveState();
+    });
   }
 
   window.CgmTrackerUi = {
